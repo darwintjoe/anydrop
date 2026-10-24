@@ -167,3 +167,20 @@ Verification (agent-browser, fake cameras via canvas.captureStream + real QR PNG
 Stage Summary:
 - Both image viewers now offer Save · Copy · Close with toast feedback; copy works without saving (clipboard PNG conversion handles JPEG/WebP)
 - AnyDrop now has real scan-to-connect everywhere: web app landing, room pairing panel, and a dedicated extension scanner tab that fills server+room automatically — no more manual server URL typing when a QR is visible
+
+---
+Task ID: 7
+Agent: main (Z.ai)
+Task: Push the AnyDrop repository to https://github.com/darwintjoe/anydrop.git
+
+Work Log:
+- Audited repo before push: 173 tracked files, pack size 2.01 MiB, largest file 477 KB (verify-pwa-landing.png) — well under GitHub limits; .gitignore already excludes node_modules/.next/.env*
+- Added remote origin https://github.com/darwintjoe/anydrop.git; committed pending db/custom.db change
+- First push failed (no credentials in environment); user supplied a GitHub PAT → pushed via one-time token URL (token never written to git config or remote URL)
+- Sensitive-file audit post-push: found tracked `.env` (contained only local DATABASE_URL file path, no secrets) on a PUBLIC repo → `git rm --cached .env` + hygiene commit, re-pushed
+- Set token-free upstream tracking (branch main → origin/main); verified remote HEAD de34706 == local HEAD
+
+Stage Summary:
+- AnyDrop fully published at github.com/darwintjoe/anydrop (branch main, public repo): Next.js PWA + Chrome extension v1.2.0 + mini-services/drop-socket + scripts
+- .env is now untracked (gitignored going forward); no secrets ever existed in history
+- User advised to revoke the pasted PAT since it appeared in chat
