@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 from PIL import Image, ImageDraw
 
-ROOT = Path('/home/z/my-project')
+ROOT = Path(__file__).resolve().parent.parent  # repo root, works on any checkout
 EXT = ROOT / 'extension'
 ICONS = EXT / 'icons'
 BUILD_TMP = ROOT / 'scripts' / 'tmp-build'
