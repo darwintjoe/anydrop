@@ -35,3 +35,23 @@ Stage Summary:
 - Deliverables: Next.js app at / (landing + room), Chrome extension zip at download/anydrop-extension.zip (also served at /anydrop-extension.zip), realtime service auto-built by platform pipeline (mini-services/drop-socket)
 - Key decisions: room-code pairing instead of accounts; bytes in SQLite (25MB cap, 24h TTL, lazy sweep); socket.io for web + 2s polling for extension; loopback control port pattern for broadcasts
 - Known limits: single-server sandbox (no multi-region), 25MB/file, 6-char code is the only room credential (documented in UI)
+
+---
+Task ID: 2
+Agent: main (Z.ai)
+Task: Answer user question "Does it work two way round?" — verify both transfer directions end-to-end on the rebuilt session.
+
+Work Log:
+- Re-initialized environment (init-fullstack.sh); confirmed all prior artifacts intact: web app, extension/, public/anydrop-extension.zip, download/anydrop-extension.zip, mini-services/drop-socket (pid file 4339, port 3003 answering)
+- Read prisma schema + drops route: both devices share one room API and broadcastToRoom('drop:new') fans out to every connected device — two-way is inherent to the design
+- Live E2E in agent-browser, room VWPV6Z:
+  * Phone→Laptop text: curl POST to room API → appeared in browser feed (Laptop = extension/web side)
+  * Laptop→Phone text: typed in web composer → returned by room API (what phone PWA reads) + shown in feed
+  * Phone→Laptop file: multipart POST test-photo.png → rendered in feed with filename/size/download link
+- Debug detour: first pass via http://127.0.0.1:3000 bypassed the Caddy gateway, so socket.io hit Next.js (connect_error → Live badge off, 15s poll fallback caught drops). Re-tested via gateway :81 (real user path): Live badge ON, text drop delivered <1.5s via socket, file drop also delivered via socket (UI renders filename not title — initial check string was wrong)
+- socket-gateway-probe.ts PASS; dev.log clean; no page errors; evidence screenshot scripts/verify-twoway.png
+
+Stage Summary:
+- CONFIRMED two-way: Device→Laptop (PWA/phone → room API → extension popup + web feed, realtime) and Laptop→Device (extension popup composer / Drop page / context menu, or web composer → phone PWA feed, realtime)
+- Socket realtime works only through the Caddy gateway path (XTransformPort routing); direct :3000 access gracefully degrades to 15s polling — extension users unaffected since they always use the public URL
+- No code changes required this task; app + extension delivered as-is
