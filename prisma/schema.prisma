@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// A Drop Room is a lightweight pairing space between devices.
+// The 6-char code is the only "credential" (like Edge Drop was tied to your account,
+// AnyDrop is tied to the room code you scan / type on each device).
+model Room {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now()) @updatedAt
+  drops        Drop[]
+}
+
+// One dropped item: a text note, a link, or a file (bytes stored in SQLite).
+model Drop {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  kind      String // "text" | "link" | "file"
+  content   String? // text body or URL
+  title     String? // page title for links / caption
+  filename  String?
+  mimetype  String?
+  size      Int?
+  data      Bytes?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([roomId, createdAt])
+}

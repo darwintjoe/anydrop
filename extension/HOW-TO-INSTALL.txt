@@ -1,0 +1,21 @@
+AnyDrop — the Edge Drop successor for Chrome
+=============================================
+
+INSTALL (2 minutes)
+ 1. Unzip this folder anywhere you like (keep it — Chrome loads it from here).
+ 2. Open  chrome://extensions  in Chrome.
+ 3. Turn on "Developer mode" (toggle, top right).
+ 4. Click "Load unpacked" and select the unzipped folder (anydrop-extension).
+ 5. Click the AnyDrop icon in the toolbar.
+
+PAIR WITH YOUR PHONE
+ 1. In the popup: make sure the Server URL matches your AnyDrop website
+    (open the site, click "this site" in the pairing panel to copy it).
+ 2. Click "Create room" -> a QR appears.
+ 3. Scan the QR with your phone camera -> the AnyDrop web app opens, paired.
+ 4. Drop text, links, files and photos in either direction.
+
+TIPS
+ * Right-click any selected text on a page -> "Drop selection to AnyDrop".
+ * The toolbar badge shows how many drops your phone sent since you looked.
+ * Drops auto-delete after 24 hours. Anyone with the room code can read the room.
