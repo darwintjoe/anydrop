@@ -18,10 +18,23 @@ export type PublicDrop = {
 export const CODE_RE = /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$/;
 const STORAGE_KEY = 'anydrop.room';
 
+// Mirror the paired room into a cookie so the OS share-target POST (/api/share)
+// knows where to deliver shares even though it never touches this JS.
+function setRoomCookie(code: string | null) {
+  try {
+    if (code) {
+      document.cookie = `anydrop_room=${code}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+    } else {
+      document.cookie = 'anydrop_room=; path=/; max-age=0; samesite=lax';
+    }
+  } catch {}
+}
+
 export function saveRoom(code: string) {
   try {
     localStorage.setItem(STORAGE_KEY, code);
   } catch {}
+  setRoomCookie(code);
 }
 export function loadRoom(): string | null {
   try {
@@ -34,6 +47,7 @@ export function clearRoom() {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {}
+  setRoomCookie(null);
 }
 
 async function handle<T>(res: Response): Promise<T> {

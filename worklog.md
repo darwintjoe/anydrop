@@ -55,3 +55,37 @@ Stage Summary:
 - CONFIRMED two-way: Device→Laptop (PWA/phone → room API → extension popup + web feed, realtime) and Laptop→Device (extension popup composer / Drop page / context menu, or web composer → phone PWA feed, realtime)
 - Socket realtime works only through the Caddy gateway path (XTransformPort routing); direct :3000 access gracefully degrades to 15s polling — extension users unaffected since they always use the public URL
 - No code changes required this task; app + extension delivered as-is
+
+---
+Task ID: 3
+Agent: main (Z.ai)
+Task: Make AnyDrop an OS **share target** like Edge Drop (user approved PWA route) — installable PWA + Web Share Target API.
+
+Work Log:
+- scripts/make_pwa_icons.py → public/pwa/: icon-192/512 (any), icon-maskable-512 (full-bleed, art in 80% safe zone), apple-touch-icon 180
+- src/app/manifest.ts: name/short_name, standalone, theme #059669, start_url /?source=pwa, icons (any+maskable), and share_target { action:/api/share, POST, multipart/form-data, params title/text/url/files[*/*] } — Next auto-injects <link rel=manifest>
+- src/app/api/share/route.ts: share receiver. Cookie anydrop_room → room; delivers comment text (deduped vs url/title), link (url or url-in-text), title-only text, and up to 10 files (25MB cap, oversize skipped+counted); broadcastToRoom('drop:new'); 303 redirect
+- src/lib/anydrop-client.ts: saveRoom/clearRoom now mirror the room into anydrop_room cookie (7d, samesite=lax) so the OS share POST (no JS) knows the destination
+- public/sw.js: precache app shell, network-first navigations w/ offline fallback, SWR for statics, NEVER touches /api/* or non-GET (share POST passes through); registered in page.tsx bootstrap
+- src/components/anydrop/install-button.tsx: beforeinstallprompt capture → "Install AnyDrop app" button; installed/standalone → disabled ✓ state
+- landing.tsx: new "Share to AnyDrop from any app" section (Android/Windows bullets, install button + manual A2HS fallback, iOS limitation note) + amber recovery card when landing via ?need_pair=1
+- page.tsx: handles ?shared=N (deferred "Share delivered" toast) and ?need_pair=1 (stores pending title/text/url; after pairing auto-delivers via sendLink/sendText + recovery toast); URL always cleaned via replaceState
+- layout.tsx: viewport themeColor #059669 + apple-touch icon
+
+Bugs found & fixed:
+1. CRITICAL: NextResponse.redirect(new URL(x, req.url)) produced ABSOLUTE Location: http://localhost:3000/... behind the Caddy gateway — would dead-end a real phone. Fixed with seeOther() helper emitting RELATIVE Location headers (RFC-legal, proxy-proof)
+2. Mount-pass toast bug: toast() during bootstrap effect lands in use-toast memoryState before <Toaster> subscribes → toast invisible. Fixed by deferring via deferredToastRef + 80ms setTimeout post-mount (click-path toasts unaffected)
+
+Verification (agent-browser via gateway :81 + curl):
+- /manifest.webmanifest JSON correct incl. share_target; /sw.js + icons 200; SW registered; manifest <link> present
+- Landing: install prompt FIRES in Chromium → "Install AnyDrop app" button renders; new section + sticky footer intact
+- Room cookie set on create (anydrop_room=U87QDA)
+- Simulated Android share POST (title+text+url+file, with cookie) → 303 /?shared=3 → all 3 items appeared in room feed INSTANTLY via socket
+- File-only share → /?shared=1; share without cookie → 303 /?need_pair=1&title=…&text=…&url=…
+- Unpaired recovery: fresh session + need_pair URL → amber notice → create room CBYB9X → link auto-delivered + "Recovered your share" toast
+- /?shared=2 → "Share delivered" toast shown (after fix), URL cleaned to /
+- lint clean; dev.log clean; screenshots scripts/verify-pwa-landing.png, verify-pwa-room.png
+
+Stage Summary:
+- AnyDrop is now a full PWA + Edge-Drop-style share target: install once → any app's Share sheet lists AnyDrop → items fly into the paired room on all devices
+- Limitations documented in UI: iOS has no web-app share-sheet support (A2HS one-tap access instead); files from an unpaired share can't be recovered (text/url are, via need_pair params)

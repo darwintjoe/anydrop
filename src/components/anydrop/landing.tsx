@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
+  AlertTriangle,
   ArrowRight,
   Chrome,
   Copy,
@@ -12,6 +13,7 @@ import {
   QrCode,
   ScanLine,
   Send,
+  Share2,
   ShieldCheck,
   Smartphone,
   Sparkles,
@@ -23,8 +25,18 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { CODE_RE, createRoom, getRoom } from '@/lib/anydrop-client';
+import InstallButton from '@/components/anydrop/install-button';
 
-export default function Landing({ onEnter }: { onEnter: (code: string) => void }) {
+// Leftovers from a share made before this device was paired (?need_pair=1 redirect).
+type ShareNotice = { title?: string; text?: string; url?: string } | null;
+
+export default function Landing({
+  onEnter,
+  shareNotice,
+}: {
+  onEnter: (code: string) => void;
+  shareNotice?: ShareNotice;
+}) {
   const { toast } = useToast();
   const [joinCode, setJoinCode] = useState('');
   const [creating, setCreating] = useState(false);
@@ -160,6 +172,27 @@ export default function Landing({ onEnter }: { onEnter: (code: string) => void }
           </div>
         </section>
 
+        {/* Share made before pairing — offer to recover it */}
+        {shareNotice && (
+          <section className="max-w-5xl mx-auto px-4 sm:px-6 mb-4">
+            <div
+              role="status"
+              className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5"
+            >
+              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" aria-hidden="true" />
+              <div className="text-sm text-amber-900">
+                <p className="font-semibold">You shared something to AnyDrop before pairing this device</p>
+                <p className="mt-1 leading-relaxed">
+                  {shareNotice.url || shareNotice.text
+                    ? 'Create or join a room below and we will deliver it automatically to your other devices.'
+                    : 'Create or join a room below, then share again.'}{' '}
+                  Files from an unpaired share cannot be kept — share them again once you are paired.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* How it works */}
         <section id="how" className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
           <h2 className="text-2xl font-bold tracking-tight text-center">Three steps, ten seconds</h2>
@@ -197,6 +230,63 @@ export default function Landing({ onEnter }: { onEnter: (code: string) => void }
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </section>
+
+        {/* Share sheet / PWA */}
+        <section id="share" className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+          <div className="rounded-3xl border border-emerald-100 bg-gradient-to-br from-teal-50 to-emerald-50 p-6 sm:p-10">
+            <div className="grid gap-8 sm:grid-cols-2 items-center">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                  <Share2 className="h-6 w-6 text-emerald-600" aria-hidden="true" />
+                  Share to AnyDrop from any app
+                </h2>
+                <p className="mt-3 text-slate-600 leading-relaxed">
+                  Install AnyDrop as an app and it joins your phone&apos;s <strong>share sheet</strong> — exactly
+                  how Edge Drop worked. In any app, tap <em>Share</em> → <em>AnyDrop</em>, and the link, text,
+                  photo or file flies straight to your room and appears on your laptop.
+                </p>
+                <ul className="mt-4 space-y-2 text-sm text-slate-700">
+                  <li className="flex gap-2">
+                    <CornerDownLeft className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                    Android: share from Chrome, Gmail, Photos, YouTube, WhatsApp — any app with a Share button
+                  </li>
+                  <li className="flex gap-2">
+                    <CornerDownLeft className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                    Windows: install the app in Chrome and AnyDrop appears in the Windows share dialog too
+                  </li>
+                  <li className="flex gap-2">
+                    <CornerDownLeft className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                    Up to 10 files per share (25 MB each), delivered instantly — no re-pairing needed
+                  </li>
+                </ul>
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <InstallButton />
+                  <span className="text-xs text-slate-500">
+                    No button? Chrome menu <strong>⋮</strong> → <strong>Add to Home screen</strong> → Install
+                  </span>
+                </div>
+              </div>
+              <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm">
+                <h3 className="font-semibold text-sm">How sharing feels</h3>
+                <ol className="mt-3 space-y-2.5 text-sm text-slate-700 list-decimal list-inside">
+                  <li>
+                    Install the app once (button on the left, or Chrome menu → <strong>Add to Home screen</strong>)
+                  </li>
+                  <li>
+                    Open the app and pair your room — the QR code or your 6-character code
+                  </li>
+                  <li>
+                    In any app: tap <strong>Share</strong> → <strong>AnyDrop</strong> → done. It lands on your laptop instantly.
+                  </li>
+                </ol>
+                <p className="mt-4 text-xs text-slate-500 leading-relaxed">
+                  iPhone note: iOS does not let web apps into the share sheet yet. Use <strong>Add to Home
+                  Screen</strong> for one-tap access and drop from inside AnyDrop instead.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 

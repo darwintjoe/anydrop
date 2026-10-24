@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   keywords: ["AnyDrop", "Edge Drop alternative", "Chrome extension", "file transfer", "phone to PC"],
   icons: {
     icon: "/anydrop.svg",
+    apple: "/pwa/apple-touch-icon.png",
   },
   openGraph: {
     title: "AnyDrop — Drop anything between your phone and Chrome",
@@ -27,6 +28,13 @@ export const metadata: Metadata = {
     siteName: "AnyDrop",
     type: "website",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#059669",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
