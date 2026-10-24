@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import ImageLightbox from '@/components/anydrop/image-lightbox';
 import { PublicDrop, formatSize, isImage, timeAgo } from '@/lib/anydrop-client';
 
 export default function DropCard({
@@ -25,6 +26,7 @@ export default function DropCard({
 }) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const copy = async (text: string) => {
     try {
@@ -46,6 +48,7 @@ export default function DropCard({
   const Icon = drop.kind === 'file' && isImage(drop.mimetype) ? ImageIcon : kindMeta.icon;
 
   return (
+    <>
     <article
       className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
       aria-label={`${kindMeta.label} dropped ${timeAgo(drop.createdAt)}`}
@@ -109,15 +112,20 @@ export default function DropCard({
       {drop.kind === 'file' && (
         <div className="mt-3">
           {isImage(drop.mimetype) && drop.downloadUrl ? (
-            <a href={drop.downloadUrl} target="_blank" rel="noopener noreferrer" className="block">
-              { }
+            <button
+              type="button"
+              onClick={() => setViewerOpen(true)}
+              className="block cursor-zoom-in"
+              aria-label={`View ${drop.filename || 'image'} large`}
+              title="Click to view"
+            >
               <img
                 src={drop.downloadUrl}
                 alt={drop.filename || 'Dropped image'}
-                className="max-h-56 rounded-xl border border-slate-100 object-cover w-auto max-w-full"
+                className="max-h-56 rounded-xl border border-slate-100 object-cover w-auto max-w-full transition-opacity hover:opacity-90"
                 loading="lazy"
               />
-            </a>
+            </button>
           ) : (
             <div className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 p-3">
               <span className="h-10 w-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
@@ -137,5 +145,15 @@ export default function DropCard({
         </div>
       )}
     </article>
+
+    {/* Click-once large view with Save / Close icons top-right (same as the extension) */}
+    {viewerOpen && drop.downloadUrl && (
+      <ImageLightbox
+        src={drop.downloadUrl}
+        caption={`${drop.filename || 'image'} · ${formatSize(drop.size)}`}
+        onClose={() => setViewerOpen(false)}
+      />
+    )}
+    </>
   );
 }

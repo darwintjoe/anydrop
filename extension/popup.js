@@ -20,15 +20,18 @@ const els = {
   composerInput: document.getElementById('composer-input'),
   composerSend: document.getElementById('composer-send'),
   attachBtn: document.getElementById('attach-btn'),
-  attachInput: document.getElementById('attach-input'),
+  attachMenu: document.getElementById('attach-menu'),
+  attachOverlay: document.getElementById('attach-overlay'),
+  attachMediaItem: document.getElementById('attach-media-item'),
+  attachFileItem: document.getElementById('attach-file-item'),
+  attachMedia: document.getElementById('attach-media'),
+  attachFile: document.getElementById('attach-file'),
   dropList: document.getElementById('drop-list'),
   viewer: document.getElementById('viewer'),
   viewerImg: document.getElementById('viewer-img'),
   viewerName: document.getElementById('viewer-name'),
   viewerClose: document.getElementById('viewer-close'),
-  viewerCopy: document.getElementById('viewer-copy'),
-  viewerDownload: document.getElementById('viewer-download'),
-  viewerOpen: document.getElementById('viewer-open'),
+  viewerSave: document.getElementById('viewer-save'),
   openWeb: document.getElementById('open-web'),
   leaveRoom: document.getElementById('leave-room'),
 };
@@ -69,6 +72,7 @@ const SVG = {
   open: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
   download: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
   trash: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  x: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
   file: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>',
 };
 
@@ -130,7 +134,7 @@ function renderDrops(drops) {
   lastRenderSig = sig;
 
   if (!drops.length) {
-    els.dropList.innerHTML = `<div class="empty"><strong>Nothing dropped yet</strong><br>Send something from your phone, or hit “Drop page”.</div>`;
+    els.dropList.innerHTML = `<div class="empty"><strong>Nothing dropped yet</strong><br>Send something from your phone, or type below.</div>`;
     return;
   }
   els.dropList.innerHTML = '';
@@ -204,7 +208,7 @@ function renderDrops(drops) {
         img.src = abs(d.downloadUrl);
         img.loading = 'lazy';
         img.alt = d.filename || 'Dropped image';
-        img.title = 'Click to view & copy';
+        img.title = 'Click to view';
         img.onclick = () => openViewer(d);
         body.appendChild(img);
       } else {
@@ -225,6 +229,24 @@ function renderDrops(drops) {
 
 function abs(path) {
   return `${settings.serverUrl.replace(/\/+$/, '')}${path}`;
+}
+
+// ---------- (+) attach menu (consistent with the PWA) ----------
+function attachMenuOpen() {
+  return !els.attachMenu.classList.contains('hidden');
+}
+
+function toggleAttachMenu(force) {
+  const open = force !== undefined ? force : !attachMenuOpen();
+  els.attachMenu.classList.toggle('hidden', !open);
+  els.attachOverlay.classList.toggle('hidden', !open);
+  els.attachBtn.classList.toggle('open', open);
+  els.attachBtn.setAttribute('aria-expanded', String(open));
+}
+
+function pickFiles(input) {
+  toggleAttachMenu(false);
+  input.click();
 }
 
 // ---------- chat-box composer ----------
@@ -279,6 +301,7 @@ async function sendAttachedFiles(files) {
   chip.textContent = files.length === 1 ? `Uploading ${files[0].name}…` : `Uploading ${files.length} files…`;
   els.composerInput.closest('.composer').appendChild(chip);
   els.attachBtn.disabled = true;
+  toggleAttachMenu(false);
   try {
     const form = new FormData();
     for (const f of files) form.append('files', f);
@@ -323,21 +346,17 @@ async function toPngBlob(blob) {
 }
 
 async function copyImage(drop, btn) {
-  const original = btn ? btn.innerHTML : '';
+  const original = btn.innerHTML;
   try {
     const res = await fetch(abs(drop.downloadUrl));
     if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
     const png = await toPngBlob(await res.blob());
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
-    if (btn) btn.innerHTML = SVG.check;
-    if (btn) setTimeout(() => (btn.innerHTML = original), 1200);
-    else {
-      els.viewerCopy.textContent = 'Copied ✓';
-      setTimeout(() => (els.viewerCopy.textContent = 'Copy image'), 1200);
-    }
+    btn.innerHTML = SVG.check;
+    setTimeout(() => (btn.innerHTML = original), 1200);
   } catch (e) {
-    els.viewerCopy.textContent = 'Copy failed';
-    setTimeout(() => (els.viewerCopy.textContent = 'Copy image'), 1600);
+    btn.innerHTML = SVG.x;
+    setTimeout(() => (btn.innerHTML = original), 1400);
   }
 }
 
@@ -445,13 +464,21 @@ els.composerInput.addEventListener('keydown', (e) => {
 
 els.composerSend.addEventListener('click', sendFromComposer);
 
-els.attachBtn.addEventListener('click', () => els.attachInput.click());
+els.attachBtn.addEventListener('click', () => toggleAttachMenu());
 
-els.attachInput.addEventListener('change', () => {
-  const files = Array.from(els.attachInput.files || []);
-  els.attachInput.value = ''; // allow re-picking the same file
-  sendAttachedFiles(files);
-});
+els.attachOverlay.addEventListener('click', () => toggleAttachMenu(false));
+
+els.attachMediaItem.addEventListener('click', () => pickFiles(els.attachMedia));
+
+els.attachFileItem.addEventListener('click', () => pickFiles(els.attachFile));
+
+for (const input of [els.attachMedia, els.attachFile]) {
+  input.addEventListener('change', () => {
+    const files = Array.from(input.files || []);
+    input.value = ''; // allow re-picking the same file
+    sendAttachedFiles(files);
+  });
+}
 
 els.viewerClose.addEventListener('click', closeViewer);
 
@@ -460,17 +487,13 @@ els.viewer.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !els.viewer.classList.contains('hidden')) closeViewer();
+  if (e.key !== 'Escape') return;
+  if (!els.viewer.classList.contains('hidden')) closeViewer();
+  else if (attachMenuOpen()) toggleAttachMenu(false);
 });
 
-els.viewerCopy.addEventListener('click', () => viewerDrop && copyImage(viewerDrop, null));
-
-els.viewerDownload.addEventListener('click', () => {
+els.viewerSave.addEventListener('click', () => {
   if (viewerDrop) window.open(abs(viewerDrop.downloadUrl) + '?download=1', '_blank');
-});
-
-els.viewerOpen.addEventListener('click', () => {
-  if (viewerDrop) chrome.tabs.create({ url: abs(viewerDrop.downloadUrl) });
 });
 
 els.leaveRoom.addEventListener('click', async () => {

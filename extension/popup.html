@@ -51,21 +51,35 @@
       <p>Scan with your phone camera to open this room on mobile.</p>
     </div>
 
-    <!-- CHAT-BOX COMPOSER -->
+    <div id="drop-list" class="drop-list" aria-label="Dropped items"></div>
+
+    <!-- CHAT-BOX COMPOSER (bottom, consistent with the PWA) -->
     <div class="composer">
+      <div id="attach-overlay" class="attach-overlay hidden" aria-hidden="true"></div>
       <div class="composer-row">
-        <button id="attach-btn" class="btn-ghost" title="Attach files or photos">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-        </button>
+        <div class="attach-wrap">
+          <button id="attach-btn" class="btn-ghost btn-round" title="Attach photos or files" aria-label="Attach photos or files" aria-expanded="false">
+            <svg class="icon plus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          </button>
+          <div id="attach-menu" class="attach-menu hidden" role="menu" aria-label="Attachment options">
+            <button id="attach-media-item" class="attach-item" role="menuitem">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" x2="22" y1="5" y2="5"/><line x1="19" x2="19" y1="2" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              Photo or video
+            </button>
+            <button id="attach-file-item" class="attach-item" role="menuitem">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+              Any file
+            </button>
+          </div>
+        </div>
         <input id="composer-input" placeholder="Message, link, anything…" autocomplete="off" spellcheck="false" />
         <button id="composer-send" class="send-btn" title="Drop it" disabled>
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
         </button>
       </div>
-      <input id="attach-input" type="file" multiple class="hidden" />
+      <input id="attach-media" type="file" accept="image/*,video/*" multiple class="hidden" aria-label="Pick photos or videos" />
+      <input id="attach-file" type="file" multiple class="hidden" aria-label="Pick any files" />
     </div>
-
-    <div id="drop-list" class="drop-list" aria-label="Dropped items"></div>
 
     <footer class="footer">
       <a id="open-web" href="#" target="_blank">Open web app</a>
@@ -74,20 +88,20 @@
     </footer>
   </main>
 
-  <!-- IMAGE VIEWER (lightbox) -->
+  <!-- IMAGE VIEWER (lightbox): click once = large view · save + close icons top-right -->
   <div id="viewer" class="viewer hidden" role="dialog" aria-label="Image viewer">
     <div class="viewer-top">
       <span id="viewer-name" class="viewer-name"></span>
-      <button id="viewer-close" class="icon-btn viewer-close" title="Close" aria-label="Close viewer">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
+      <div class="viewer-top-actions">
+        <button id="viewer-save" class="icon-btn viewer-icon" title="Save image" aria-label="Save image">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        <button id="viewer-close" class="icon-btn viewer-icon" title="Close" aria-label="Close viewer">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
     </div>
     <div class="viewer-stage"><img id="viewer-img" alt="Dropped image" /></div>
-    <div class="viewer-actions">
-      <button id="viewer-copy" class="btn-primary">Copy image</button>
-      <button id="viewer-download" class="btn-secondary">Download</button>
-      <button id="viewer-open" class="btn-secondary">Open</button>
-    </div>
   </div>
 
   <script src="popup.js"></script>

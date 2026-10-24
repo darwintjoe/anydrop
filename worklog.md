@@ -119,3 +119,25 @@ Verification:
 Stage Summary:
 - Extension popup is now self-sufficient chat-style (type/attach without opening the web app), images view+copy in one tap, PWA composer reduced to one smart input + one (+) button
 - Extension version 1.1.0 — users should re-download the zip and reload the unpacked extension
+
+---
+Task ID: 5
+Agent: main (Z.ai)
+Task: User feedback round — (1) extension chat box moved to the bottom like the PWA, (2) extension paperclip → (+) button consistent with the PWA, (3) image click-to-view = large view with two small icons top-right (save + close) in the extension, (4) same behavior for the PWA.
+
+Work Log:
+- extension/popup.html: composer block moved BELOW #drop-list (order: room-row → qr-panel → drop-list → composer → footer, same visual order as the PWA); paperclip replaced with a round (+) button that opens a PWA-style popover menu ("Photo or video" accept=image/*,video/* / "Any file") opening upward with 45° rotate-to-✕ affordance + click-away overlay; image viewer rebuilt: top bar = filename·size left, two small icon buttons top-right (Save = download, Close = ✕), old bottom Copy/Download/Open action bar removed
+- extension/popup.css: .btn-round/.attach-wrap/.attach-menu/.attach-item/.attach-overlay + plus-icon rotation; viewer styles → .viewer-top-actions/.viewer-icon, .viewer-actions rules deleted
+- extension/popup.js: attach menu state (toggleAttachMenu/pickFiles, overlay + Esc + aria-expanded), two hidden inputs (attach-media/attach-file) with change → sendAttachedFiles; copyImage simplified (card copy button only; ✕ flash on failure via new SVG.x); viewerSave handler (window.open ?download=1); Esc closes menu before viewer; empty-state copy now says "type below"
+- src/components/anydrop/image-lightbox.tsx (NEW): full-screen viewer — single click opens large, caption top-left ("name · size"), two small icon buttons top-right (Save = <a ?download=1 download>, Close = ✕), Esc + backdrop-click close, body scroll lock
+- src/components/anydrop/drop-card.tsx: image <a target=_blank> replaced with a cursor-zoom-in button that opens ImageLightbox (no more new-tab navigation); card header Download button unchanged
+- Rebuilt extension zip (public + download) via build_extension.py
+
+Verification (agent-browser):
+- Extension popup via chrome-stub harness (scripts/make_popup_test.py → scripts/popup-test/popup-test.html, real room KVC97K + real API): DOM order confirms composer below drop-list; (+) menu opens above button with "Photo or video"/"Any file"; image click → viewer with top-right icons ["Save image","Close viewer"], large image, no bottom bar; close via ✕ and Esc both OK; screenshots verify-ext-plus-menu.png / verify-ext-viewer.png
+- PWA (gateway :81, 414×896): image card → single click opens ImageLightbox, caption "test-photo.png · 4.1 KB", save href "...?download=1" + download attr, icons top-right, body locked; close ✕ / Esc / backdrop all OK; screenshot verify-pwa-lightbox.png
+- node --check popup.js OK; manifest.json parses; bun run lint clean; dev.log clean (only stale EADDRINUSE from old startup); POST /api/rooms/KVC97K/drops 201
+
+Stage Summary:
+- Extension popup and PWA now share one interaction language: chat box at the bottom, one smart input + one (+) attach menu, and click-once image viewing with Save/Close icons top-right
+- Extension v1.1.0 rebuilt (zip unchanged in version, users just reload unpacked); PWA is install-driven so refresh picks it up automatically

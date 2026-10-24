@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AnyDrop</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="brand">
+      <img src="icons/icon32.png" alt="" class="brand-icon" />
+      <span>AnyDrop</span>
+    </div>
+    <div id="live-badge" class="live hidden"><span class="dot"></span>Live</div>
+  </header>
+
+  <!-- SETUP VIEW -->
+  <main id="setup" class="hidden">
+    <p class="setup-hint">1 · Point AnyDrop at your server</p>
+    <input id="server-url" type="url" placeholder="https://your-anydrop-server" spellcheck="false" />
+    <p class="setup-sub">Open the AnyDrop website, click “Copy server URL” in the pairing panel, paste it here.</p>
+
+    <p class="setup-hint">2 · Pair a Drop Room</p>
+    <button id="create-room" class="btn-primary">Create room</button>
+    <div class="divider"><span>or join an existing one</span></div>
+    <div class="join-row">
+      <input id="join-code" maxlength="6" placeholder="CODE" autocomplete="off" />
+      <button id="join-room" class="btn-secondary">Join</button>
+    </div>
+    <p id="setup-error" class="error hidden"></p>
+  </main>
+
+  <!-- MAIN VIEW -->
+  <main id="main" class="hidden">
+    <div class="room-row">
+      <button id="copy-code" class="code-chip" title="Copy room code">
+        <span class="code-label">ROOM</span>
+        <span id="room-code" class="code-value">······</span>
+      </button>
+      <button id="toggle-qr" class="btn-ghost" title="Show pairing QR">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M21 14v.01"/><path d="M14 21v.01"/><path d="M17.5 17.5v.01"/><path d="M21 21v.01"/></svg>
+      </button>
+      <button id="drop-page" class="btn-primary btn-small" title="Send this tab's URL to your phone">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+        Drop page
+      </button>
+    </div>
+
+    <div id="qr-panel" class="qr-panel hidden">
+      <img id="qr-img" alt="Pairing QR code" />
+      <p>Scan with your phone camera to open this room on mobile.</p>
+    </div>
+
+    <div id="drop-list" class="drop-list" aria-label="Dropped items"></div>
+
+    <!-- CHAT-BOX COMPOSER (bottom, consistent with the PWA) -->
+    <div class="composer">
+      <div id="attach-overlay" class="attach-overlay hidden" aria-hidden="true"></div>
+      <div class="composer-row">
+        <div class="attach-wrap">
+          <button id="attach-btn" class="btn-ghost btn-round" title="Attach photos or files" aria-label="Attach photos or files" aria-expanded="false">
+            <svg class="icon plus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          </button>
+          <div id="attach-menu" class="attach-menu hidden" role="menu" aria-label="Attachment options">
+            <button id="attach-media-item" class="attach-item" role="menuitem">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" x2="22" y1="5" y2="5"/><line x1="19" x2="19" y1="2" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              Photo or video
+            </button>
+            <button id="attach-file-item" class="attach-item" role="menuitem">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+              Any file
+            </button>
+          </div>
+        </div>
+        <input id="composer-input" placeholder="Message, link, anything…" autocomplete="off" spellcheck="false" />
+        <button id="composer-send" class="send-btn" title="Drop it" disabled>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+        </button>
+      </div>
+      <input id="attach-media" type="file" accept="image/*,video/*" multiple class="hidden" aria-label="Pick photos or videos" />
+      <input id="attach-file" type="file" multiple class="hidden" aria-label="Pick any files" />
+    </div>
+
+    <footer class="footer">
+      <a id="open-web" href="#" target="_blank">Open web app</a>
+      <span class="spacer"></span>
+      <button id="leave-room" class="btn-link danger">Leave room</button>
+    </footer>
+  </main>
+
+  <!-- IMAGE VIEWER (lightbox): click once = large view · save + close icons top-right -->
+  <div id="viewer" class="viewer hidden" role="dialog" aria-label="Image viewer">
+    <div class="viewer-top">
+      <span id="viewer-name" class="viewer-name"></span>
+      <div class="viewer-top-actions">
+        <button id="viewer-save" class="icon-btn viewer-icon" title="Save image" aria-label="Save image">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        <button id="viewer-close" class="icon-btn viewer-icon" title="Close" aria-label="Close viewer">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="viewer-stage"><img id="viewer-img" alt="Dropped image" /></div>
+  </div>
+
+  <script>
+// chrome.* stub so popup.js runs in a plain browser against the live API
+const STORE = { serverUrl: 'http://127.0.0.1:81', roomCode: 'KVC97K', lastSeenAt: new Date().toISOString() };
+window.chrome = {
+  storage: {
+    local: {
+      get: async (keys) => Object.fromEntries(keys.map((k) => [k, STORE[k]])),
+      set: async (patch) => Object.assign(STORE, patch),
+    },
+  },
+  action: { setBadgeText: async () => {} },
+  tabs: {
+    query: async () => [{ url: 'http://127.0.0.1:81/', title: 'AnyDrop' }],
+    create: async (args) => { window.open('http://127.0.0.1:81/', '_blank'); },
+  },
+  contextMenus: { create: () => {} },
+  alarms: { create: () => {} },
+};
+window.__TEST = { STORE };
+</script>
+<script src="popup.js"></script>
+
+</body>
+</html>
