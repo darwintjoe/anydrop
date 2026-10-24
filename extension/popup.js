@@ -17,7 +17,18 @@ const els = {
   qrPanel: document.getElementById('qr-panel'),
   qrImg: document.getElementById('qr-img'),
   dropPage: document.getElementById('drop-page'),
+  composerInput: document.getElementById('composer-input'),
+  composerSend: document.getElementById('composer-send'),
+  attachBtn: document.getElementById('attach-btn'),
+  attachInput: document.getElementById('attach-input'),
   dropList: document.getElementById('drop-list'),
+  viewer: document.getElementById('viewer'),
+  viewerImg: document.getElementById('viewer-img'),
+  viewerName: document.getElementById('viewer-name'),
+  viewerClose: document.getElementById('viewer-close'),
+  viewerCopy: document.getElementById('viewer-copy'),
+  viewerDownload: document.getElementById('viewer-download'),
+  viewerOpen: document.getElementById('viewer-open'),
   openWeb: document.getElementById('open-web'),
   leaveRoom: document.getElementById('leave-room'),
 };
@@ -25,6 +36,7 @@ const els = {
 let settings = { serverUrl: null, roomCode: null, lastSeenAt: null };
 let pollTimer = null;
 let online = true;
+let lastRenderSig = null;
 
 const api = (path, options) =>
   fetch(`${settings.serverUrl.replace(/\/+$/, '')}${path}`, options).then(async (res) => {
@@ -52,6 +64,7 @@ function formatSize(bytes) {
 
 const SVG = {
   copy: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  image: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
   check: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
   open: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
   download: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
@@ -111,6 +124,11 @@ async function pollNow() {
 }
 
 function renderDrops(drops) {
+  // Skip identical payloads so the 2s poll doesn't re-render (and flicker) images.
+  const sig = JSON.stringify(drops.map((d) => [d.id, d.kind, d.size, d.content]));
+  if (sig === lastRenderSig) return;
+  lastRenderSig = sig;
+
   if (!drops.length) {
     els.dropList.innerHTML = `<div class="empty"><strong>Nothing dropped yet</strong><br>Send something from your phone, or hit “Drop page”.</div>`;
     return;
@@ -139,6 +157,12 @@ function renderDrops(drops) {
       actions.appendChild(btn);
     }
     if (d.kind === 'file' && d.downloadUrl) {
+      const isImg = (d.mimetype || '').startsWith('image/');
+      if (isImg) {
+        const copyImg = mkIconBtn(SVG.image, 'Copy image');
+        copyImg.onclick = () => copyImage(d, copyImg);
+        actions.appendChild(copyImg);
+      }
       const btn = mkIconBtn(SVG.download, 'Download');
       btn.onclick = () => {
         window.open(abs(d.downloadUrl) + '?download=1', '_blank');
@@ -180,6 +204,8 @@ function renderDrops(drops) {
         img.src = abs(d.downloadUrl);
         img.loading = 'lazy';
         img.alt = d.filename || 'Dropped image';
+        img.title = 'Click to view & copy';
+        img.onclick = () => openViewer(d);
         body.appendChild(img);
       } else {
         const row = document.createElement('div');
@@ -199,6 +225,120 @@ function renderDrops(drops) {
 
 function abs(path) {
   return `${settings.serverUrl.replace(/\/+$/, '')}${path}`;
+}
+
+// ---------- chat-box composer ----------
+function looksLikeLink(content) {
+  return /^https?:\/\//i.test(content) || /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(content);
+}
+
+async function sendFromComposer() {
+  const raw = els.composerInput.value.trim();
+  if (!raw || els.composerSend.disabled) return;
+  els.composerSend.disabled = true;
+  els.composerSend.classList.add('busy');
+  try {
+    if (looksLikeLink(raw)) {
+      const content = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+      await api(`/api/rooms/${settings.roomCode}/drops`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'link', content }),
+      });
+    } else {
+      await api(`/api/rooms/${settings.roomCode}/drops`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'text', content: raw }),
+      });
+    }
+    els.composerInput.value = '';
+    pollNow();
+  } catch (e) {
+    flashComposerError(e.message);
+  } finally {
+    els.composerSend.classList.remove('busy');
+    els.composerSend.disabled = !els.composerInput.value.trim();
+  }
+}
+
+function flashComposerError(message) {
+  const chip = document.createElement('div');
+  chip.className = 'attach-chip';
+  chip.style.color = '#dc2626';
+  chip.style.borderColor = '#fecaca';
+  chip.textContent = `Failed: ${message}`;
+  els.composerInput.closest('.composer').appendChild(chip);
+  setTimeout(() => chip.remove(), 2600);
+}
+
+async function sendAttachedFiles(files) {
+  if (!files.length) return;
+  const chip = document.createElement('div');
+  chip.className = 'attach-chip';
+  chip.textContent = files.length === 1 ? `Uploading ${files[0].name}…` : `Uploading ${files.length} files…`;
+  els.composerInput.closest('.composer').appendChild(chip);
+  els.attachBtn.disabled = true;
+  try {
+    const form = new FormData();
+    for (const f of files) form.append('files', f);
+    await api(`/api/rooms/${settings.roomCode}/drops`, { method: 'POST', body: form });
+    chip.textContent = 'Dropped ✓';
+    setTimeout(() => chip.remove(), 1200);
+    pollNow();
+  } catch (e) {
+    chip.remove();
+    flashComposerError(e.message);
+  } finally {
+    els.attachBtn.disabled = false;
+  }
+}
+
+// ---------- image viewer ----------
+let viewerDrop = null;
+
+function openViewer(drop) {
+  viewerDrop = drop;
+  els.viewerImg.src = abs(drop.downloadUrl);
+  els.viewerName.textContent = `${drop.filename || 'image'} · ${formatSize(drop.size)}`;
+  els.viewer.classList.remove('hidden');
+}
+
+function closeViewer() {
+  els.viewer.classList.add('hidden');
+  els.viewerImg.src = '';
+  viewerDrop = null;
+}
+
+async function toPngBlob(blob) {
+  if (blob.type === 'image/png') return blob;
+  const bmp = await createImageBitmap(blob);
+  const canvas = document.createElement('canvas');
+  canvas.width = bmp.width;
+  canvas.height = bmp.height;
+  canvas.getContext('2d').drawImage(bmp, 0, 0);
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas encode failed'))), 'image/png')
+  );
+}
+
+async function copyImage(drop, btn) {
+  const original = btn ? btn.innerHTML : '';
+  try {
+    const res = await fetch(abs(drop.downloadUrl));
+    if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
+    const png = await toPngBlob(await res.blob());
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+    if (btn) btn.innerHTML = SVG.check;
+    if (btn) setTimeout(() => (btn.innerHTML = original), 1200);
+    else {
+      els.viewerCopy.textContent = 'Copied ✓';
+      setTimeout(() => (els.viewerCopy.textContent = 'Copy image'), 1200);
+    }
+  } catch (e) {
+    els.viewerCopy.textContent = 'Copy failed';
+    setTimeout(() => (els.viewerCopy.textContent = 'Copy image'), 1600);
+  }
 }
 
 function mkIconBtn(svg, label, danger = false) {
@@ -292,6 +432,47 @@ els.dropPage.addEventListener('click', async () => {
   }
 });
 
+els.composerInput.addEventListener('input', () => {
+  els.composerSend.disabled = !els.composerInput.value.trim() || els.composerSend.classList.contains('busy');
+});
+
+els.composerInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendFromComposer();
+  }
+});
+
+els.composerSend.addEventListener('click', sendFromComposer);
+
+els.attachBtn.addEventListener('click', () => els.attachInput.click());
+
+els.attachInput.addEventListener('change', () => {
+  const files = Array.from(els.attachInput.files || []);
+  els.attachInput.value = ''; // allow re-picking the same file
+  sendAttachedFiles(files);
+});
+
+els.viewerClose.addEventListener('click', closeViewer);
+
+els.viewer.addEventListener('click', (e) => {
+  if (e.target === els.viewer) closeViewer(); // click on the dark backdrop
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !els.viewer.classList.contains('hidden')) closeViewer();
+});
+
+els.viewerCopy.addEventListener('click', () => viewerDrop && copyImage(viewerDrop, null));
+
+els.viewerDownload.addEventListener('click', () => {
+  if (viewerDrop) window.open(abs(viewerDrop.downloadUrl) + '?download=1', '_blank');
+});
+
+els.viewerOpen.addEventListener('click', () => {
+  if (viewerDrop) chrome.tabs.create({ url: abs(viewerDrop.downloadUrl) });
+});
+
 els.leaveRoom.addEventListener('click', async () => {
   clearInterval(pollTimer);
   await saveSettings({ roomCode: null, lastSeenAt: null });
@@ -306,6 +487,7 @@ els.leaveRoom.addEventListener('click', async () => {
   if (stored.serverUrl) els.serverUrl.value = stored.serverUrl;
   if (stored.serverUrl && stored.roomCode && CODE_RE.test(stored.roomCode)) {
     enterMain();
+    setTimeout(() => els.composerInput.focus(), 50);
   } else {
     show('setup');
   }

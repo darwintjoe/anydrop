@@ -89,3 +89,33 @@ Verification (agent-browser via gateway :81 + curl):
 Stage Summary:
 - AnyDrop is now a full PWA + Edge-Drop-style share target: install once → any app's Share sheet lists AnyDrop → items fly into the paired room on all devices
 - Limitations documented in UI: iOS has no web-app share-sheet support (A2HS one-tap access instead); files from an unpaired share can't be recovered (text/url are, via need_pair params)
+
+---
+Task ID: 4
+Agent: main (Z.ai)
+Task: User feedback round — (1) chat box inside the Chrome extension popup, (2) click-to-view + copy images in the popup, (3) simplify the PWA composer to a single (+) composer.
+
+Work Log:
+- extension/popup.html: added chat-box composer (paperclip attach + rounded input + round send button) between QR panel and drop list; added full-screen image viewer overlay (name, big image, Copy image / Download / Open, close + Esc + backdrop-click)
+- extension/popup.css: composer + viewer styles; card images get cursor:zoom-in + hover ring
+- extension/popup.js:
+  * composer: looksLikeLink() auto-detect (http(s), bare domains, paths) → kind link with https:// prefix else text; Enter sends (shift excluded); busy pulse + error chip
+  * attach: hidden multi-file input → immediate multipart upload with "Uploading…/Dropped ✓" chip
+  * viewer: openViewer(drop), copyImage() fetches blob → toPngBlob() canvas conversion (non-PNG) → ClipboardItem write; Copy-image icon button also on image card headers
+  * renderDrops: signature-based skip (JSON of id/kind/size/content) so the 2s poll no longer rebuilds DOM or flickers images; scroll preserved
+- extension/manifest.json: v1.1.0, +clipboardWrite permission
+- src/lib/anydrop-client.ts: sendFiles now accepts getXhr callback (abort support) and rejects on abort
+- src/components/anydrop/composer.tsx: REWRITTEN per request — no more Text/Link/Files tabs; single input ("Message, link, anything…") auto-sends note vs link, (+) popover menu (Photo or video / Any file) uploads IMMEDIATELY with slim progress+cancel row, clipboard paste of files uploads instantly, Enter=send on desktop / newline on touch keyboards
+- Rebuilt extension zip (public + download) with build_extension.py
+
+Bugs found & fixed:
+1. popup.js regex syntax error: unescaped `/` inside `(/\S*)?` in a regex literal — node --check caught it; fixed to `(\/\S*)?`
+
+Verification:
+- node --check popup.js OK; manifest.json parses; lint clean; zips rebuilt
+- Web E2E (gateway :81, room XM9NXU): "hello from the new composer" → Note; "github.com/microsoft/edge" → Link auto-prefixed https://; (+) menu lists Photo or video / Any file; upload via hidden input → "UPLOADED", file card in feed; dev.log clean; screenshot scripts/verify-composer.png
+- Extension composer/attach/viewer use the same room API endpoints already proven by curl tests
+
+Stage Summary:
+- Extension popup is now self-sufficient chat-style (type/attach without opening the web app), images view+copy in one tap, PWA composer reduced to one smart input + one (+) button
+- Extension version 1.1.0 — users should re-download the zip and reload the unpacked extension

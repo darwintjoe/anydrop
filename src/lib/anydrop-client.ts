@@ -98,17 +98,20 @@ export async function sendLink(code: string, content: string, title?: string): P
   return data.drops;
 }
 
-/** XHR-based upload so we can show a progress bar (fetch cannot report upload progress). */
+/** XHR-based upload so we can show a progress bar (fetch cannot report upload progress).
+ *  Pass `getXhr` to receive the XMLHttpRequest handle (used to cancel uploads). */
 export function sendFiles(
   code: string,
   files: File[],
-  onProgress?: (pct: number) => void
+  onProgress?: (pct: number) => void,
+  getXhr?: (xhr: XMLHttpRequest) => void
 ): Promise<PublicDrop[]> {
   return new Promise((resolve, reject) => {
     const form = new FormData();
     files.forEach((f) => form.append('files', f));
 
     const xhr = new XMLHttpRequest();
+    if (getXhr) getXhr(xhr);
     xhr.open('POST', `/api/rooms/${code}/drops`);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
@@ -125,6 +128,7 @@ export function sendFiles(
       }
     };
     xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.onabort = () => reject(new Error('Upload cancelled'));
     xhr.send(form);
   });
 }

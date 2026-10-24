@@ -51,6 +51,20 @@
       <p>Scan with your phone camera to open this room on mobile.</p>
     </div>
 
+    <!-- CHAT-BOX COMPOSER -->
+    <div class="composer">
+      <div class="composer-row">
+        <button id="attach-btn" class="btn-ghost" title="Attach files or photos">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <input id="composer-input" placeholder="Message, link, anything…" autocomplete="off" spellcheck="false" />
+        <button id="composer-send" class="send-btn" title="Drop it" disabled>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+        </button>
+      </div>
+      <input id="attach-input" type="file" multiple class="hidden" />
+    </div>
+
     <div id="drop-list" class="drop-list" aria-label="Dropped items"></div>
 
     <footer class="footer">
@@ -59,6 +73,22 @@
       <button id="leave-room" class="btn-link danger">Leave room</button>
     </footer>
   </main>
+
+  <!-- IMAGE VIEWER (lightbox) -->
+  <div id="viewer" class="viewer hidden" role="dialog" aria-label="Image viewer">
+    <div class="viewer-top">
+      <span id="viewer-name" class="viewer-name"></span>
+      <button id="viewer-close" class="icon-btn viewer-close" title="Close" aria-label="Close viewer">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="viewer-stage"><img id="viewer-img" alt="Dropped image" /></div>
+    <div class="viewer-actions">
+      <button id="viewer-copy" class="btn-primary">Copy image</button>
+      <button id="viewer-download" class="btn-secondary">Download</button>
+      <button id="viewer-open" class="btn-secondary">Open</button>
+    </div>
+  </div>
 
   <script src="popup.js"></script>
 </body>
