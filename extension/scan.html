@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AnyDrop — Scan to connect</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #f8fafc; --card: #ffffff; --line: #e2e8f0;
+      --text: #0f172a; --muted: #64748b; --brand: #059669; --brand-dark: #047857;
+    }
+    body {
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg); color: var(--text); padding: 24px 16px;
+    }
+    header { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; margin-bottom: 18px; }
+    header img { width: 28px; height: 28px; border-radius: 8px; }
+    .stage {
+      position: relative; width: min(420px, 92vw); aspect-ratio: 4 / 3;
+      background: #0f172a; border-radius: 18px; overflow: hidden;
+      box-shadow: 0 12px 40px rgba(15,23,42,.22);
+    }
+    video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    /* viewfinder corner brackets */
+    .corner { position: absolute; width: 34px; height: 34px; border: 3.5px solid #fff; opacity: .9; }
+    .corner.tl { top: 14%; left: 10%; border-right: none; border-bottom: none; border-radius: 8px 0 0 0; }
+    .corner.tr { top: 14%; right: 10%; border-left: none; border-bottom: none; border-radius: 0 8px 0 0; }
+    .corner.bl { bottom: 14%; left: 10%; border-right: none; border-top: none; border-radius: 0 0 0 8px; }
+    .corner.br { bottom: 14%; right: 10%; border-left: none; border-top: none; border-radius: 0 0 8px 0; }
+    .status {
+      position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 14px;
+      font-size: 13.5px; font-weight: 600; color: #fff; text-align: center;
+      background: linear-gradient(transparent, rgba(15,23,42,.85));
+    }
+    .status.error { color: #fecaca; }
+    .hint { margin-top: 16px; max-width: 440px; text-align: center; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+    .btn-secondary {
+      margin-top: 16px; background: #fff; color: var(--text);
+      border: 1px solid var(--line); border-radius: 10px;
+      padding: 10px 22px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .btn-secondary:hover { border-color: var(--brand); color: var(--brand); }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon48.png" alt="" />
+    <span>Scan to connect</span>
+  </header>
+
+  <div class="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+    <div id="scan-status" class="status">Starting camera…</div>
+  </div>
+
+  <p class="hint">
+    Point the camera at the AnyDrop QR code shown on your other device — the room pairing panel on the web app,
+    or the QR in the extension popup. The server address and room code fill in automatically.
+  </p>
+
+  <button id="scan-cancel" class="btn-secondary">Cancel</button>
+
+  <canvas id="canvas" class="hidden"></canvas>
+
+  <script src="jsQR.js"></script>
+  <script src="scan.js"></script>
+</body>
+</html>

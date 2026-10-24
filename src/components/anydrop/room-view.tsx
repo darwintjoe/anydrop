@@ -10,6 +10,7 @@ import {
   QrCode,
   RadioTower,
   RefreshCw,
+  ScanLine,
   Send,
   Smartphone,
   X,
@@ -19,20 +20,32 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import DropCard from '@/components/anydrop/drop-card';
 import Composer from '@/components/anydrop/composer';
+import QrScanner from '@/components/anydrop/qr-scanner';
 import {
   PublicDrop,
   deleteDrop as apiDeleteDrop,
+  getRoom,
   listDrops,
+  parseRoomQr,
 } from '@/lib/anydrop-client';
 
 const SOCKET_PORT = 3003; // reached via /?XTransformPort=3003 through the gateway
 
-export default function RoomView({ code, onLeave }: { code: string; onLeave: () => void }) {
+export default function RoomView({
+  code,
+  onLeave,
+  onSwitchRoom,
+}: {
+  code: string;
+  onLeave: () => void;
+  onSwitchRoom?: (code: string) => void;
+}) {
   const { toast } = useToast();
   const [drops, setDrops] = useState<PublicDrop[]>([]);
   const [loading, setLoading] = useState(true);
   const [live, setLive] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [origin, setOrigin] = useState('');
   const feedRef = useRef<HTMLDivElement>(null);
   const dropsRef = useRef<PublicDrop[]>([]);
@@ -132,6 +145,35 @@ export default function RoomView({ code, onLeave }: { code: string; onLeave: () 
     } catch {}
   };
 
+  const handleScanned = async (raw: string) => {
+    setScannerOpen(false);
+    const parsed = parseRoomQr(raw);
+    if (!parsed) {
+      toast({
+        title: 'Not an AnyDrop QR code',
+        description: 'Point the camera at the QR shown in the room pairing panel or the extension popup.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (parsed.origin && parsed.origin !== window.location.origin) {
+      // The QR belongs to a different AnyDrop server — go there directly.
+      window.location.href = parsed.url!;
+      return;
+    }
+    if (parsed.code === code) {
+      toast({ title: 'Already in this room' });
+      return;
+    }
+    try {
+      await getRoom(parsed.code);
+      onSwitchRoom?.(parsed.code);
+      toast({ title: `Switched to room ${parsed.code}` });
+    } catch (e) {
+      toast({ title: 'Room not found', description: (e as Error).message, variant: 'destructive' });
+    }
+  };
+
   const roomUrl = origin ? `${origin}/?room=${code}` : '';
 
   return (
@@ -220,6 +262,16 @@ export default function RoomView({ code, onLeave }: { code: string; onLeave: () 
               <p className="text-xs text-slate-500 mt-1.5">
                 Chrome extension? Click the AnyDrop icon → paste this site&apos;s address as the server → enter the code.
               </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setScannerOpen(true)}
+                className="mt-3 bg-white"
+                aria-label="Scan a room QR code to connect"
+              >
+                <ScanLine className="h-4 w-4" />
+                Scan to connect
+              </Button>
             </div>
             <Button
               variant="ghost"
@@ -260,6 +312,11 @@ export default function RoomView({ code, onLeave }: { code: string; onLeave: () 
 
       {/* Composer */}
       <Composer code={code} />
+
+      {/* In-app QR scanner for pairing another screen's code */}
+      {scannerOpen && (
+        <QrScanner onClose={() => setScannerOpen(false)} onScan={handleScanned} />
+      )}
     </div>
   );
 }

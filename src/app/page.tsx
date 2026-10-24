@@ -139,7 +139,7 @@ export default function Page() {
   }
 
   return roomCode ? (
-    <RoomView code={roomCode} onLeave={leaveRoom} />
+    <RoomView code={roomCode} onLeave={leaveRoom} onSwitchRoom={enterRoom} />
   ) : (
     <Landing onEnter={enterRoom} shareNotice={shareNotice} />
   );

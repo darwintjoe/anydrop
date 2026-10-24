@@ -32,6 +32,8 @@ const els = {
   viewerName: document.getElementById('viewer-name'),
   viewerClose: document.getElementById('viewer-close'),
   viewerSave: document.getElementById('viewer-save'),
+  viewerCopy: document.getElementById('viewer-copy'),
+  scanConnect: document.getElementById('scan-connect'),
   openWeb: document.getElementById('open-web'),
   leaveRoom: document.getElementById('leave-room'),
 };
@@ -345,19 +347,40 @@ async function toPngBlob(blob) {
   );
 }
 
-async function copyImage(drop, btn) {
-  const original = btn.innerHTML;
+async function copyImageToClipboard(drop) {
   try {
     const res = await fetch(abs(drop.downloadUrl));
     if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
     const png = await toPngBlob(await res.blob());
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
-    btn.innerHTML = SVG.check;
-    setTimeout(() => (btn.innerHTML = original), 1200);
+    return true;
   } catch (e) {
-    btn.innerHTML = SVG.x;
-    setTimeout(() => (btn.innerHTML = original), 1400);
+    return false;
   }
+}
+
+async function copyImage(drop, btn) {
+  const original = btn.innerHTML;
+  const ok = await copyImageToClipboard(drop);
+  btn.innerHTML = ok ? SVG.check : SVG.x;
+  showPopupToast(ok ? 'Image copied to clipboard' : 'Copy failed — try Save instead');
+  setTimeout(() => (btn.innerHTML = original), 1200);
+}
+
+// ---------- popup toast ----------
+let toastTimer = null;
+function showPopupToast(message) {
+  let el = document.getElementById('popup-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'popup-toast';
+    el.setAttribute('role', 'status');
+    document.body.appendChild(el);
+  }
+  el.textContent = message;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
 }
 
 function mkIconBtn(svg, label, danger = false) {
@@ -494,6 +517,20 @@ document.addEventListener('keydown', (e) => {
 
 els.viewerSave.addEventListener('click', () => {
   if (viewerDrop) window.open(abs(viewerDrop.downloadUrl) + '?download=1', '_blank');
+});
+
+els.viewerCopy.addEventListener('click', async () => {
+  if (!viewerDrop || els.viewerCopy.disabled) return;
+  els.viewerCopy.disabled = true;
+  const ok = await copyImageToClipboard(viewerDrop);
+  els.viewerCopy.disabled = false;
+  els.viewerCopy.innerHTML = ok ? SVG.check : SVG.x;
+  showPopupToast(ok ? 'Image copied to clipboard' : 'Copy failed — try Save instead');
+  setTimeout(() => (els.viewerCopy.innerHTML = SVG.copy), 1500);
+});
+
+els.scanConnect.addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('scan.html') });
 });
 
 els.leaveRoom.addEventListener('click', async () => {

@@ -24,8 +24,9 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CODE_RE, createRoom, getRoom } from '@/lib/anydrop-client';
+import { CODE_RE, createRoom, getRoom, parseRoomQr } from '@/lib/anydrop-client';
 import InstallButton from '@/components/anydrop/install-button';
+import QrScanner from '@/components/anydrop/qr-scanner';
 
 // Leftovers from a share made before this device was paired (?need_pair=1 redirect).
 type ShareNotice = { title?: string; text?: string; url?: string } | null;
@@ -41,6 +42,7 @@ export default function Landing({
   const [joinCode, setJoinCode] = useState('');
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const handleCreate = async () => {
     setCreating(true);
@@ -63,6 +65,32 @@ export default function Landing({
     try {
       await getRoom(code);
       onEnter(code);
+    } catch (e) {
+      toast({ title: 'Room not found', description: (e as Error).message, variant: 'destructive' });
+      setJoining(false);
+    }
+  };
+
+  const handleScanned = async (raw: string) => {
+    setScannerOpen(false);
+    const parsed = parseRoomQr(raw);
+    if (!parsed) {
+      toast({
+        title: 'Not an AnyDrop QR code',
+        description: 'Point the camera at the QR shown in the room pairing panel or the extension popup.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (parsed.origin && parsed.origin !== window.location.origin) {
+      // The QR belongs to a different AnyDrop server — go there directly.
+      window.location.href = parsed.url!;
+      return;
+    }
+    setJoining(true);
+    try {
+      await getRoom(parsed.code);
+      onEnter(parsed.code);
     } catch (e) {
       toast({ title: 'Room not found', description: (e as Error).message, variant: 'destructive' });
       setJoining(false);
@@ -139,6 +167,16 @@ export default function Landing({
                   Join
                 </Button>
               </div>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => setScannerOpen(true)}
+                aria-label="Scan a room QR code to connect"
+                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+              >
+                <ScanLine className="h-5 w-5" />
+                Scan to connect
+              </Button>
             </div>
             <p className="mt-3 text-xs text-slate-400">
               Anyone with the room code can see this room — share it only with your own devices.
@@ -372,6 +410,9 @@ export default function Landing({
           <p className="text-xs text-slate-400">Drops expire after 24 h · No account · Built with Next.js</p>
         </div>
       </footer>
+      {scannerOpen && (
+        <QrScanner onClose={() => setScannerOpen(false)} onScan={handleScanned} />
+      )}
     </div>
   );
 }

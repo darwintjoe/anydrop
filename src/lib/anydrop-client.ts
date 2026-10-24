@@ -18,6 +18,26 @@ export type PublicDrop = {
 export const CODE_RE = /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$/;
 const STORAGE_KEY = 'anydrop.room';
 
+/**
+ * Parse a scanned QR payload into a room join instruction.
+ * Accepts the AnyDrop room QR (https://<server>/?room=CODE) or a bare 6-char code.
+ * `origin` is null for bare codes — the caller should use the current origin.
+ */
+export function parseRoomQr(text: string): { code: string; origin: string | null; url: string | null } | null {
+  const t = (text || '').trim();
+  if (CODE_RE.test(t.toUpperCase())) return { code: t.toUpperCase(), origin: null, url: null };
+  if (/^https?:\/\//i.test(t)) {
+    try {
+      const u = new URL(t);
+      const code = (u.searchParams.get('room') || '').toUpperCase();
+      if (CODE_RE.test(code)) return { code, origin: u.origin, url: t };
+    } catch {
+      // not a usable URL
+    }
+  }
+  return null;
+}
+
 // Mirror the paired room into a cookie so the OS share-target POST (/api/share)
 // knows where to deliver shares even though it never touches this JS.
 function setRoomCookie(code: string | null) {

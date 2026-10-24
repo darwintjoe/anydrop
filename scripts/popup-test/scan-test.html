@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AnyDrop — Scan to connect</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #f8fafc; --card: #ffffff; --line: #e2e8f0;
+      --text: #0f172a; --muted: #64748b; --brand: #059669; --brand-dark: #047857;
+    }
+    body {
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg); color: var(--text); padding: 24px 16px;
+    }
+    header { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; margin-bottom: 18px; }
+    header img { width: 28px; height: 28px; border-radius: 8px; }
+    .stage {
+      position: relative; width: min(420px, 92vw); aspect-ratio: 4 / 3;
+      background: #0f172a; border-radius: 18px; overflow: hidden;
+      box-shadow: 0 12px 40px rgba(15,23,42,.22);
+    }
+    video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    /* viewfinder corner brackets */
+    .corner { position: absolute; width: 34px; height: 34px; border: 3.5px solid #fff; opacity: .9; }
+    .corner.tl { top: 14%; left: 10%; border-right: none; border-bottom: none; border-radius: 8px 0 0 0; }
+    .corner.tr { top: 14%; right: 10%; border-left: none; border-bottom: none; border-radius: 0 8px 0 0; }
+    .corner.bl { bottom: 14%; left: 10%; border-right: none; border-top: none; border-radius: 0 0 0 8px; }
+    .corner.br { bottom: 14%; right: 10%; border-left: none; border-top: none; border-radius: 0 0 8px 0; }
+    .status {
+      position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 14px;
+      font-size: 13.5px; font-weight: 600; color: #fff; text-align: center;
+      background: linear-gradient(transparent, rgba(15,23,42,.85));
+    }
+    .status.error { color: #fecaca; }
+    .hint { margin-top: 16px; max-width: 440px; text-align: center; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+    .btn-secondary {
+      margin-top: 16px; background: #fff; color: var(--text);
+      border: 1px solid var(--line); border-radius: 10px;
+      padding: 10px 22px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .btn-secondary:hover { border-color: var(--brand); color: var(--brand); }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon48.png" alt="" />
+    <span>Scan to connect</span>
+  </header>
+
+  <div class="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+    <div id="scan-status" class="status">Starting camera…</div>
+  </div>
+
+  <p class="hint">
+    Point the camera at the AnyDrop QR code shown on your other device — the room pairing panel on the web app,
+    or the QR in the extension popup. The server address and room code fill in automatically.
+  </p>
+
+  <button id="scan-cancel" class="btn-secondary">Cancel</button>
+
+  <canvas id="canvas" class="hidden"></canvas>
+
+  <script src="jsQR.js"></script>
+  <script>
+// chrome.* stub + fake camera for the scan-to-connect tab
+const STORE = {}; // start EMPTY: the scan must fill serverUrl AND roomCode
+window.__TEST = { STORE, closed: false };
+window.chrome = {
+  storage: { local: { get: async (k)=>({}), set: async (patch) => Object.assign(STORE, patch) } },
+  action: { setBadgeText: async () => {} },
+};
+window.close = () => { window.__TEST.closed = true; };
+
+// Fake camera: getUserMedia resolves only once the QR canvas stream exists.
+let cameraResolve;
+const cameraReady = new Promise((r) => (cameraResolve = r));
+navigator.mediaDevices.getUserMedia = async () => cameraReady;
+
+(async () => {
+  const dataUrl = 'data:image/png;base64,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';
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataUrl; });
+  const c = document.createElement('canvas');
+  c.width = 640; c.height = 480;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(img, 160, 80, 320, 320);
+  cameraResolve(c.captureStream(15));
+  window.__TEST.cameraReady = true;
+})();
+</script>
+<script src="scan.js"></script>
+
+</body>
+</html>

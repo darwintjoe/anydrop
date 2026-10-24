@@ -97,6 +97,9 @@ PAIR WITH YOUR PHONE
     (open the site, click "this site" in the pairing panel to copy it).
  2. Click "Create room" -> a QR appears.
  3. Scan the QR with your phone camera -> the AnyDrop web app opens, paired.
+    No camera on this machine? Click "Scan to connect" on the device that HAS
+    a camera and point it at the QR shown on the other screen — the server
+    and room fill in automatically.
  4. Drop text, links, files and photos in either direction.
 
 TIPS

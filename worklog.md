@@ -141,3 +141,29 @@ Verification (agent-browser):
 Stage Summary:
 - Extension popup and PWA now share one interaction language: chat box at the bottom, one smart input + one (+) attach menu, and click-once image viewing with Save/Close icons top-right
 - Extension v1.1.0 rebuilt (zip unchanged in version, users just reload unpacked); PWA is install-driven so refresh picks it up automatically
+
+---
+Task ID: 6
+Agent: main (Z.ai)
+Task: User feedback round — (1) Copy icon next to Save/Close in the image viewers with a toast when copied, (2) real scan-to-connect (in-app/in-extension QR scanner) instead of only "scan with your phone camera" hints.
+
+Work Log:
+- src/components/anydrop/image-lightbox.tsx: third icon button Copy between Save and Close; fetch → toPngBlob (canvas convert for non-PNG) → ClipboardItem write; success → shadcn toast "Image copied to clipboard" + icon swaps to check (Loader2 while busy); failure → destructive toast suggesting Save
+- extension popup.html/css/js: viewer-copy icon button added between viewer-save and viewer-close; copyImageToClipboard() extracted (bool result); showPopupToast() — dark pill bottom-center (#popup-toast, role=status, z-index above viewer) reused by viewer copy AND card copy; .viewer-icon:disabled + .btn-block styles
+- Scan-to-connect PWA: src/components/anydrop/qr-scanner.tsx (NEW) — full-screen scanner, getUserMedia (facingMode environment), decode loop @120ms: native BarcodeDetector fast path → jsQR fallback (bundled npm jsqr@1.4.0) on 480px downscaled frames; viewfinder corner brackets, starting/scanning/error states (permission-denied copy), Esc + close button, vibrate on hit, conditional-mount design (avoids sync-setState-in-effect lint error); parseRoomQr() added to anydrop-client.ts (accepts https://server/?room=CODE or bare 6-char code, returns code+origin)
+- Landing: "Scan to connect" outline button in the CTA row; onScan validates via getRoom then onEnter; QR pointing at a DIFFERENT AnyDrop origin redirects to that server directly
+- RoomView pairing panel: "Scan to connect" button; new onSwitchRoom prop (page.tsx passes enterRoom) → validates + switches room with toast; same-origin/other-room/invalid paths handled
+- Extension scan: NEW scan.html + scan.js full-tab scanner (popups die when the OS camera-permission prompt takes focus, so a tab is the robust surface); vendored node_modules/jsqr/dist/jsQR.js → extension/jsQR.js (UMD, window.jsQR); decodes → chrome.storage.local.set({serverUrl: scannedOrigin, roomCode}) from EMPTY storage → "Paired with room CODE ✓" → window.close(); popup setup view gained a "Scan to connect" button (chrome.runtime.getURL('scan.html'))
+- manifest.json → 1.2.0; build_extension.py README updated; eslint ignores now cover extension/** and scripts/** (vendored UMD tripped no-assign-module-variable)
+
+Verification (agent-browser, fake cameras via canvas.captureStream + real QR PNGs):
+- Extension popup harness: viewer shows [Save image, Copy image, Close viewer]; copy → clipboard.write ×1 + toast "Image copied to clipboard" (screenshot verify-ext-copy-toast.png)
+- Extension scan harness (camera stub starts EMPTY): jsQR decoded room QR → status "Paired with room KVC97K ✓", storage gained serverUrl http://127.0.0.1:81 AND roomCode KVC97K, window.close called (verify-ext-scan.png); popup "Scan to connect" → tabs.create('scan.html')
+- PWA landing: fake camera streaming /api/qr PNG of room AE4THE → click "Scan to connect" → decoded + joined → RoomView chip AE4THE (verify-pwa-scanned-room.png)
+- PWA lightbox copy: clipboard.write ×1, icon → check, toast "Image copied to clipboard" (verify-pwa-copy-toast.png)
+- PWA pairing panel scanner: opens (scanning state UI, verify-pwa-scanner.png), Esc closes; scanning AE4THE QR while in KVC97K switches rooms
+- bun run lint clean; node --check popup.js/scan.js OK; zip rebuilt with scan.html/scan.js/jsQR.js + manifest 1.2.0; dev.log clean
+
+Stage Summary:
+- Both image viewers now offer Save · Copy · Close with toast feedback; copy works without saving (clipboard PNG conversion handles JPEG/WebP)
+- AnyDrop now has real scan-to-connect everywhere: web app landing, room pairing panel, and a dedicated extension scanner tab that fills server+room automatically — no more manual server URL typing when a QR is visible

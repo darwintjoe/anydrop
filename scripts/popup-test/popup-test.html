@@ -27,6 +27,12 @@
       <input id="join-code" maxlength="6" placeholder="CODE" autocomplete="off" />
       <button id="join-room" class="btn-secondary">Join</button>
     </div>
+    <div class="divider"><span>or pair by camera</span></div>
+    <button id="scan-connect" class="btn-secondary btn-block">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" x2="17" y1="12" y2="12"/></svg>
+      Scan to connect
+    </button>
+    <p class="setup-sub">Point your camera at the AnyDrop QR shown on your other device — server and room fill in automatically.</p>
     <p id="setup-error" class="error hidden"></p>
   </main>
 
@@ -96,6 +102,9 @@
         <button id="viewer-save" class="icon-btn viewer-icon" title="Save image" aria-label="Save image">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>
+        <button id="viewer-copy" class="icon-btn viewer-icon" title="Copy image" aria-label="Copy image">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
         <button id="viewer-close" class="icon-btn viewer-icon" title="Close" aria-label="Close viewer">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
@@ -105,8 +114,9 @@
   </div>
 
   <script>
-// chrome.* stub so popup.js runs in a plain browser against the live API
+// chrome.* stub so the extension UI runs in a plain browser against the live API
 const STORE = { serverUrl: 'http://127.0.0.1:81', roomCode: 'KVC97K', lastSeenAt: new Date().toISOString() };
+window.__TEST = { STORE, tabsOpened: [] };
 window.chrome = {
   storage: {
     local: {
@@ -115,14 +125,16 @@ window.chrome = {
     },
   },
   action: { setBadgeText: async () => {} },
+  runtime: { getURL: (p) => p },
   tabs: {
     query: async () => [{ url: 'http://127.0.0.1:81/', title: 'AnyDrop' }],
-    create: async (args) => { window.open('http://127.0.0.1:81/', '_blank'); },
+    create: async (args) => { window.__TEST.tabsOpened.push(args && args.url); },
   },
   contextMenus: { create: () => {} },
   alarms: { create: () => {} },
 };
-window.__TEST = { STORE };
+// clipboard stub: allow clipboard-image writes in the test browser
+navigator.clipboard.write = async (items) => { window.__TEST.clipboardWrites = (window.__TEST.clipboardWrites || 0) + 1; };
 </script>
 <script src="popup.js"></script>
 
