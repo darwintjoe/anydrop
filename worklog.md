@@ -291,3 +291,19 @@ Stage Summary:
 - One config surface, three consumption points: .env (local builds, gitignored) → extension/config.js (generated, gitignored) → zips (local + GitHub Release); repo variable DEFAULT_SERVER_URL controls release zips from GitHub Settings UI
 - Tracked sources stay URL-free: changing your server = edit .env (and/or the repo variable) + rebuild — never a source diff
 - Newcomer flow complete: install v1.2.3 → server prefilled → QR already scannable in setup view → phone lands on https://anydrop.space-z.ai → install PWA
+
+---
+Task ID: 13
+Agent: main (Z.ai)
+Task: User asked for a publicly accessible privacy policy HTML page + the link
+
+Work Log:
+- Created public/privacy.html — fully self-contained (inline CSS, no build deps), AnyDrop emerald/slate theme matching the app, paper-plane brand mark, sticky header + Back to AnyDrop button, print-friendly
+- Content is ACCURATE to actual behavior (audited against codebase/worklog): no accounts (room code = only credential), drops stored server-side for device-to-device delivery with 24h auto-delete + instant delete, 25MB file cap, room codes unlinked from identity, no analytics/trackers/ads/third parties, localStorage+cookie (web) & chrome.storage.local (extension) pairing state, camera scan-to-connect decodes on-device only, extension context-menu sends only explicitly selected text, honest security section (code = shared mailbox key, prefer HTTPS), self-hosting via open-source repo, children's privacy, policy-change + contact via GitHub issues
+- Landing links: "Full privacy policy →" inside the Private-by-design section + "Privacy policy" in the footer (plain <a> to static file — no next/link needed, lint-safe)
+- Verified through gateway :81 (the public domain path): HTTP 200 text/html 13.4KB; agent-browser render check — 13 h2 sections, 5 TLDR items, title OK, zero page errors; landing shows both links; screenshot verify-privacy-page.png
+- bun run lint clean; committed 9384d25; pushed main (extension untouched → no tag/zip/release)
+
+Stage Summary:
+- Public privacy policy live at https://anydrop.space-z.ai/privacy.html, discoverable from the landing page in two places
+- Extension v1.2.3 artifacts unchanged; no release needed
