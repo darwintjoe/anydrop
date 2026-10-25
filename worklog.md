@@ -270,3 +270,24 @@ Stage Summary:
 - Extension default server URL is now config-as-code: set DEFAULT_SERVER_URL in .env (or environment), run build_extension.py, get a personalized zip — nothing hardcoded in the repo; public releases stay URL-free
 - AnyDrop-onboarding QR ships in the popup: setup view (live as you type) + paired view (next to the room QR) — newcomers scan → open the server in their phone browser → install the PWA
 - v1.2.2 live at github.com/darwintjoe/anydrop/releases
+
+---
+Task ID: 12
+Agent: main (Z.ai)
+Task: User asked "where .env reside for app published at z.ai. For example anydrop default server is https://anydrop.space-z.ai" — answer + make that URL the actual default everywhere
+
+Work Log:
+- ANSWER: the z.ai deployment IS this workspace — .env lives at /home/z/my-project/.env (repo root, next to package.json); https://anydrop.space-z.ai routes via Caddy :81 to the Next.js dev server reading exactly that file; .env.example is the tracked template
+- .env: DEFAULT_SERVER_URL=https://anydrop.space-z.ai set (stays gitignored/private)
+- DESIGN FIX: old build injection mutated tracked extension/popup.js (dirty repo, URL risked being committed). Replaced with write_config() → GENERATED extension/config.js (gitignored); popup.html loads it before popup.js; popup.js `typeof DEFAULT_SERVER_URL` guard already degrades gracefully when absent
+- .gitignore: extension/config.js + scripts/popup-test/config.js (harness copy); also split the glued "/skills/# comment" line into valid pattern+comment
+- ci.yml: Package step now passes DEFAULT_SERVER_URL: ${{ vars.DEFAULT_SERVER_URL }}; created the GitHub repo variable via REST (POST /repos/darwintjoe/anydrop/actions/variables — PUT 404s on nonexistent vars, create=POST to collection) so CI-built RELEASE zips carry the URL too
+- manifest 1.2.3; zips rebuilt; node --check OK; bun run lint clean
+- E2E (harness on :8123, 3 paths): (1) setup view + config.js → field prefilled https://anydrop.space-z.ai, QR visible, LIVE QR PNG fetched from /api/qr decoded via jsQR+pngjs in Node = exactly "https://anydrop.space-z.ai"; (2) paired view → server-qr-img2 (170px) beside room QR (220px); (3) fresh-clone path (no config.js, empty store) → field stays empty, QR hidden, no crash, no page errors. Screenshots verify-ext-server-qr-setup.png / -paired.png
+- Git: feature commit 8c46a33 + chore db sync 48ecb35 pushed to main; tag v1.2.3 pushed SEPARATELY (same-push quirk respected); CI runs #10 (main) + #11 (tag) both success; Release v1.2.3 auto-created
+- PROOF: downloaded the GitHub release zip → its config.js contains the baked URL and manifest=1.2.3 → repo variable flowed end-to-end through CI
+
+Stage Summary:
+- One config surface, three consumption points: .env (local builds, gitignored) → extension/config.js (generated, gitignored) → zips (local + GitHub Release); repo variable DEFAULT_SERVER_URL controls release zips from GitHub Settings UI
+- Tracked sources stay URL-free: changing your server = edit .env (and/or the repo variable) + rebuild — never a source diff
+- Newcomer flow complete: install v1.2.3 → server prefilled → QR already scannable in setup view → phone lands on https://anydrop.space-z.ai → install PWA
