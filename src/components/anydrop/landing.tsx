@@ -394,7 +394,10 @@ export default function Landing({
               <strong className="text-slate-800">Private by design.</strong> Rooms are keyed only by their
               6-character code — there is no sign-up, and nothing is linked to an identity. Drops live for 24
               hours and are then deleted automatically, and you can delete any drop instantly. Think of a room
-              code as a one-time shared mailbox between your own devices.
+              code as a one-time shared mailbox between your own devices.{' '}
+              <a href="/privacy.html" className="whitespace-nowrap font-semibold text-emerald-700 hover:text-emerald-800 hover:underline">
+                Full privacy policy →
+              </a>
             </p>
           </div>
         </section>
@@ -407,7 +410,10 @@ export default function Landing({
             <img src="/anydrop.svg" alt="" className="h-5 w-5" aria-hidden="true" />
             AnyDrop — Edge Drop lives on, now in Chrome.
           </div>
-          <p className="text-xs text-slate-400">Drops expire after 24 h · No account · Built with Next.js</p>
+          <p className="text-xs text-slate-400">
+            Drops expire after 24 h · No account · Built with Next.js ·{' '}
+            <a href="/privacy.html" className="font-medium hover:text-emerald-600">Privacy policy</a>
+          </p>
         </div>
       </footer>
       {scannerOpen && (
