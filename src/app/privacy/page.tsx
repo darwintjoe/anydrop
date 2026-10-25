@@ -146,13 +146,17 @@ export default function PrivacyPage() {
           <li>
             <strong>Drops</strong> — the text, links, and uploaded files or images you send (files up to
             25&nbsp;MB). These are stored in a plain database on the server purely so your other device can fetch
-            them. Every drop is <strong>deleted automatically 24 hours after it is created</strong>, and deleting
-            a drop in the UI removes it immediately for everyone in the room.
+            them. The 24-hour clock runs <strong>per drop, from the moment that individual drop was sent</strong>{" "}
+            — not from when the room was created, and not at a fixed midnight. When a drop&apos;s 24 hours are up,
+            the server physically deletes its row from the database the next time the room is touched; because
+            paired devices poll every few seconds, that deletion lands within seconds of the deadline. Deleting a
+            drop in the UI removes it immediately for everyone in the room.
           </li>
           <li>
             <strong>Room codes</strong> — the 6-character identifiers of created rooms. A room code exists only
             so your devices can find each other; it is not connected to any name, email, device fingerprint, or
-            account.
+            account. A room with no activity for <strong>7 days</strong> is deleted entirely, along with anything
+            still inside it.
           </li>
           <li>
             <strong>Nothing else.</strong> There are no user profiles, no logs tied to identity, no email
