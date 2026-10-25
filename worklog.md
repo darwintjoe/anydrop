@@ -325,3 +325,23 @@ Stage Summary:
 - Root cause: platform serves a build snapshot (standalone + copied public/) on the public domain; new static files after build = 404 forever until republish
 - Canonical policy URL is now /privacy (dynamic route, survives rebuilds); old .html path redirects
 - Published link goes live after the platform redeploy triggered by Complete
+
+---
+Task ID: 15
+Agent: main (Z.ai)
+Task: Chrome Web Store flagged broad host permissions (publishing delayed) — rewrite extension permissions for least privilege
+
+Work Log:
+- Audited every cross-origin usage in extension/: api() fetches (popup+SW), QR/file <img>, ?download=1 navigations, copy-image blob fetch — ALL hit /api/* which the server middleware already answers with Access-Control-Allow-Origin: * (room code travels in the URL path, no cookies); tabs.query/context-menu tab.url+title are covered by activeTab (granted on popup open / menu click); scan.js is camera-only → the manifest's http://*/* + https://*/* were dead weight
+- manifest 1.2.4: host_permissions REMOVED entirely (cleaner than narrowing to one domain — keeps the self-host-any-domain story intact); permissions stay storage/contextMenus/alarms/activeTab/clipboardWrite, none of which trigger the broad-host deep review
+- popup.js: ensureOriginPermission() — only plain-http (LAN self-host) servers trigger chrome.permissions.request({origins:[origin]/*}) at setup-click time (exact origin, user gesture, persisted); https needs nothing; wired into create+join flows with a clear error if denied
+- Harness: chrome.permissions mock (records requests, grants), ?fresh=1 param boots empty store for setup-view E2E; synced popup.js/manifest copies
+- E2E (:8123): (1) paired view boots, 8 drops, online, zero perm requests; (2) fresh + http://127.0.0.1:81 → request ["http://127.0.0.1:81/*"], room AMENJT created via real API; (3) fresh + https://anydrop.space-z.ai → NO requests, real room H5WDWB on production, online. Screenshots verify-no-hostperm-{http,https}-setup.png
+- privacy/page.tsx: removed stale eslint-disable (warning cleanup); /privacy + /privacy.html now 200 on the public domain (Task 14 redeploy confirmed live)
+- Git: commit 99d72d3 (amended to drop tool-results/ + upload/ from the repo, both gitignored) → main pushed 7eebbd0..99d72d3; tag v1.2.4 pushed separately; CI success on both; Release v1.2.4 auto-created and its zip verified: manifest 1.2.4, host_permissions absent, config URL baked
+- Local zips rebuilt via build_extension.py (public/ + download/)
+
+Stage Summary:
+- Extension is now genuinely least-privilege: no install-time host access of any kind; the CWS "Publishing will be delayed" warning disappears once the 1.2.4 zip is uploaded to the draft
+- LAN self-host (http) still works via one-time scoped runtime prompt; https default (incl. anydrop.space-z.ai) works with zero prompts
+- Landing-page download zip goes 1.2.4 after the platform redeploy triggered by Complete
