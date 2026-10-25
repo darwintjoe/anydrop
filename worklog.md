@@ -203,3 +203,27 @@ Stage Summary:
 - github.com/darwintjoe/anydrop now has: README landing page, green CI badge, CI on every push/PR, and an automated release pipeline — tag a v* and the extension zip is attached automatically
 - Release v1.2.0 live at github.com/darwintjoe/anydrop/releases with the prebuilt extension zip (matches extension/manifest.json 1.2.0)
 - Local HEAD == remote main (b8ce085; platform auto-commit of db/custom.db on top of d0bc453 is expected runtime noise)
+
+---
+Task ID: 9
+Agent: main (Z.ai)
+Task: User request — make the extension chatbox multiline: Enter = new line, NOT send
+
+Work Log:
+- extension/popup.html: #composer-input <input> → <textarea rows=1> with title tooltip "Enter for a new line · Ctrl+Enter to send"
+- extension/popup.css: generic input styles extended to input,textarea (+focus); #composer-input rebuilt — pill at rest (38px, radius 19px), max-height 116px (~3 lines) then overflow-y scroll, line-height 20px, resize:none; .composer-row align-items center → flex-end (buttons hug bottom when grown, identical at rest)
+- extension/popup.js: autoGrowComposer() (height:auto → min(scrollHeight,116)px) wired into input event + after-send clear; keydown now sends ONLY on Ctrl/Cmd+Enter (Enter falls through to native newline); sendFromComposer link-detect guarded with !raw.includes('\n') so multiline messages are always kind:text
+- manifest.json → 1.2.1; zip rebuilt (public + download); node --check OK; bun run lint clean
+- E2E via popup-test harness (agent-browser, real room KVC97K + real API through gateway :81):
+  * Enter between two lines → value "line one\nline two", drop count unchanged, auto-grow 38→58px ✓
+  * Send button → card "line one\nline two" (pre-wrap renders 2 lines), input cleared, height reset 38px ✓
+  * "check github.com/microsoft/edge\nand this second line" → NOTE (no card-url element) — multiline guard ✓
+  * Single-line "github.com/microsoft/edge" → LINK with https:// prefix (regression clean) ✓
+  * Ctrl+Enter sends ("sent via ctrl+enter") ✓
+  * 5 lines → height capped 116px, scrollable=true; buttons aligned bottom (screenshot verify-ext-multiline-grow.png); no page/console errors
+- Pushed main (3d11c62) + tag v1.2.1 alone (tag-in-same-push quirk re-checked: pushed tag separately → CI fired); CI v1.2.1 success; Release v1.2.1 auto-created with anydrop-extension.zip
+
+Stage Summary:
+- Extension composer is now a real multiline chat box: Enter=newline, ✈ button or Ctrl/Cmd+Enter=send, pill grows to 3 lines then scrolls, multiline text never misrouted as a link; renders multiline on both ends (extension .card-body and PWA drop-card both pre-wrap)
+- Extension v1.2.1 released at github.com/darwintjoe/anydrop/releases — users should re-download/reload the unpacked extension
+- PWA composer intentionally unchanged (user asked for extension only)
