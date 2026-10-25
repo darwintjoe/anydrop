@@ -307,3 +307,21 @@ Work Log:
 Stage Summary:
 - Public privacy policy live at https://anydrop.space-z.ai/privacy.html, discoverable from the landing page in two places
 - Extension v1.2.3 artifacts unchanged; no release needed
+
+---
+Task ID: 14
+Agent: main (Z.ai)
+Task: User reported https://anydrop.space-z.ai/privacy.html returns 404
+
+Work Log:
+- Diagnosis: public domain behaves differently from gateway :81 — pre-existing static files (robots.txt, anydrop.svg) 200 externally, NEW public/ files 404 even with query cache-busters; dynamic /api/* 200
+- Found platform deployment model via .zscripts/build.sh: published site = Function Compute (X-Fc-* headers) running a STANDALONE build packaged at 11:29 (stat .next/standalone = 11:29) — public/ copied at build time → anything created after (privacy.html, ping-test.txt) 404s; :81 → local next dev (always fresh) — that's why local checks passed. External /privacy (route) ALSO 404'd: the 11:29 standalone predates the route; 404 page carried the app title = Next's own 404 from the deployed build
+- Fix: policy rewritten as REAL Next route src/app/privacy/page.tsx (same content/theme as JSX, scoped .pp styles, metadata); public/privacy.html → meta-refresh redirect stub to /privacy; landing links → /privacy (2 spots); removed ping-test.txt
+- Validation: ran the platform's own build.sh (BUILD_ID=localcheck) → 53MB artifact; booted next-service-dist with bun server.js on :3200 + temp DATABASE_URL exactly like FC start.sh → /privacy 200 with content, /privacy.html redirects, /api/qr 200, / boots (links are client-rendered — 'use client' + ready gate — so curl can't see them; agent-browser DOM is the source of truth)
+- Committed 7eebbd0, pushed main; standalone test server + /tmp artifacts cleaned up
+- Next: Complete(web_dev) called to trigger platform rebuild/redeploy of the published site → then re-verify https://anydrop.space-z.ai/privacy
+
+Stage Summary:
+- Root cause: platform serves a build snapshot (standalone + copied public/) on the public domain; new static files after build = 404 forever until republish
+- Canonical policy URL is now /privacy (dynamic route, survives rebuilds); old .html path redirects
+- Published link goes live after the platform redeploy triggered by Complete
