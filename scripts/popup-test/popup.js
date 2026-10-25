@@ -1,3 +1,4 @@
+
 // AnyDrop popup logic
 
 const CODE_RE = /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$/;
@@ -16,6 +17,9 @@ const els = {
   toggleQr: document.getElementById('toggle-qr'),
   qrPanel: document.getElementById('qr-panel'),
   qrImg: document.getElementById('qr-img'),
+  serverQrWrap: document.getElementById('server-qr-wrap'),
+  serverQrImg: document.getElementById('server-qr-img'),
+  serverQrImg2: document.getElementById('server-qr-img2'),
   dropPage: document.getElementById('drop-page'),
   composerInput: document.getElementById('composer-input'),
   composerSend: document.getElementById('composer-send'),
@@ -97,9 +101,12 @@ async function saveSettings(patch) {
 function enterMain() {
   els.roomCode.textContent = settings.roomCode;
   els.serverUrl.value = settings.serverUrl;
-  els.qrImg.src = `${settings.serverUrl.replace(/\/+$/, '')}/api/qr?text=${encodeURIComponent(
-    settings.serverUrl.replace(/\/+$/, '') + '/?room=' + settings.roomCode
+  const base = settings.serverUrl.replace(/\/+$/, '');
+  els.qrImg.src = `${base}/api/qr?text=${encodeURIComponent(
+    base + '/?room=' + settings.roomCode
   )}&size=220`;
+  // Server QR — newcomers scan to open/install the PWA (no room attached)
+  els.serverQrImg2.src = `${base}/api/qr?text=${encodeURIComponent(base)}&size=170`;
   els.openWeb.href = settings.serverUrl;
   show('main');
   pollNow();
@@ -446,6 +453,31 @@ els.serverUrl.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') els.createRoom.click();
 });
 
+// ---------- server QR (setup view): lets newcomers open/install the PWA ----------
+function normalizedServerInput() {
+  let url = els.serverUrl.value.trim().replace(/\/+$/, '');
+  if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`;
+  // full-string check: host must contain a dot, no spaces/garbage tails
+  return /^https?:\/\/[^\s/]+\.[^\s/]{2,}(\/[^\s]*)?$/i.test(url) ? url : '';
+}
+
+function updateServerQr() {
+  const url = normalizedServerInput();
+  if (!url) {
+    els.serverQrWrap.classList.add('hidden');
+    els.serverQrImg.src = '';
+    return;
+  }
+  els.serverQrImg.src = `${url}/api/qr?text=${encodeURIComponent(url)}&size=170`;
+  els.serverQrWrap.classList.remove('hidden');
+}
+
+let serverQrTimer = null;
+els.serverUrl.addEventListener('input', () => {
+  clearTimeout(serverQrTimer);
+  serverQrTimer = setTimeout(updateServerQr, 300);
+});
+
 els.copyCode.addEventListener('click', async () => {
   await navigator.clipboard.writeText(settings.roomCode || '');
   const label = els.copyCode.querySelector('.code-label');
@@ -557,6 +589,8 @@ els.leaveRoom.addEventListener('click', async () => {
   const stored = await chrome.storage.local.get(['serverUrl', 'roomCode', 'lastSeenAt']);
   settings = stored;
   if (stored.serverUrl) els.serverUrl.value = stored.serverUrl;
+  else if (typeof DEFAULT_SERVER_URL === 'string' && DEFAULT_SERVER_URL) els.serverUrl.value = DEFAULT_SERVER_URL;
+  updateServerQr(); // show the newcomer QR as soon as a server URL is known
   if (stored.serverUrl && stored.roomCode && CODE_RE.test(stored.roomCode)) {
     enterMain();
     setTimeout(() => els.composerInput.focus(), 50);

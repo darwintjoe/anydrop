@@ -245,3 +245,28 @@ Stage Summary:
 - Verified user's claim precisely: PWA box was multiline-capable (auto-grow textarea) and Enter=newline on touch, but desktop Enter still sent — now aligned
 - Both surfaces now share one interaction language: Enter=newline everywhere, button or Ctrl/Cmd+Enter=send, multiline text never misrouted as link
 - Next.js dev hot-reloaded the change; PWA users get it on refresh
+
+---
+Task ID: 11
+Agent: main (Z.ai)
+Task: User requests — (1) extension default server URL configurable via .env instead of hardcoding, (2) QR code linking to the server in the extension so newcomers can open/install the PWA
+
+Work Log:
+- .env: added DEFAULT_SERVER_URL= (empty by default, commented); new tracked .env.example template (needed a .gitignore exception `!.env.example` — the `.env*` rule was swallowing it)
+- scripts/build_extension.py: new load_env_file() (tiny KEY=VALUE parser, no deps); precedence = real env var > .env; inject_default_server(default_url) now only writes the DEFAULT_SERVER_URL const (popup.js handles prefill natively); marker cleanup simplified; source printed (environment/.env/none)
+- extension/popup.js: boot now prefills the setup field from `typeof DEFAULT_SERVER_URL` when storage is empty; added normalizedServerInput() (auto-https prefix, FULL-string host.tld validation) + updateServerQr() (300ms-debounced input listener); setup view QR appears as soon as a valid URL is known; enterMain() sets the paired-view server QR next to the room QR
+- extension/popup.html: #server-qr-wrap in setup view; #server-qr-img2 + captions + .qr-sep inside the existing pairing QR panel
+- extension/popup.css: .server-qr styles (white card, 150px), 128px variant inside .qr-panel
+- Server side unchanged — /api/qr?text= already accepts arbitrary URLs (verified 200 image/png)
+- manifest.json → 1.2.2; zips rebuilt with EMPTY default (public release stays default-free; user bakes their own URL locally via .env)
+- Harness: make_popup_test.py now takes optional SERVER ROOM CLI args (setup-view harness via empty args)
+- E2E (agent-browser harness + real gateway): paired view → room QR "?room=KVC97K" + server QR bare URL, both naturalWidth>0; setup view → QR hidden for empty/placeholder/invalid, appears for "drop.example.com" with https:// normalized, "127.0.0.1:81" normalizes to https:// (correct for prod), full http:// URL loads a LIVE QR PNG; garbage tail "url --first" rejected (caught a prefix-only regex bug in the first validator — tightened to full-string match)
+- Gotcha: harness embeds popup.js — must regenerate make_popup_test.py after popup.js edits (stale harness gave a false garbage-test failure)
+- bun run lint clean (exit 0); node --check OK; injection cycle verified (env var bakes const → clean build removes it)
+- Pushed main (f91a41a) + tag v1.2.2 separately; CI green on both; Release v1.2.2 auto-created with anydrop-extension.zip
+- README: features bullet for the newcomer server QR; "Prefill your server URL" section rewritten around .env/.env.example with env-var-override note
+
+Stage Summary:
+- Extension default server URL is now config-as-code: set DEFAULT_SERVER_URL in .env (or environment), run build_extension.py, get a personalized zip — nothing hardcoded in the repo; public releases stay URL-free
+- AnyDrop-onboarding QR ships in the popup: setup view (live as you type) + paired view (next to the room QR) — newcomers scan → open the server in their phone browser → install the PWA
+- v1.2.2 live at github.com/darwintjoe/anydrop/releases
