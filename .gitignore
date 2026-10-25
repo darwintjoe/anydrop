@@ -51,5 +51,11 @@ prompt
 
 server.log
 # Skills directory
-/skills/# ...but keep the tracked template
+/skills/
+
+# Generated extension config (holds the user's default server URL — never commit)
+extension/config.js
+scripts/popup-test/config.js
+
+# ...but keep the tracked env template
 !.env.example

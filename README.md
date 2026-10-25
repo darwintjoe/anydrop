@@ -89,7 +89,11 @@ cp .env.example .env
 python3 scripts/build_extension.py
 ```
 
-The zip is repacked with the server URL already filled in — installers only need to pair a room. Leave it empty (the default) to let users paste their own server URL, and note that a real environment variable `DEFAULT_SERVER_URL` always wins over the `.env` value. The popup also shows a **QR of your server URL** in the setup view (as soon as a valid URL is known) and next to the pairing QR — newcomers scan it to open AnyDrop in their phone's browser and install the PWA.
+The build writes a **generated `extension/config.js`** (gitignored — your URL never touches tracked sources) and repacks the zip with the server URL already filled in — installers only need to pair a room. Leave it empty (the default) to let users paste their own server URL, and note that a real environment variable `DEFAULT_SERVER_URL` always wins over the `.env` value. Loading the unpacked `extension/` folder works too: it picks up `config.js` the same way.
+
+Publishing to GitHub Releases? Add a repository **variable** `DEFAULT_SERVER_URL` (*Settings → Secrets and variables → Actions → Variables*) and CI bakes the same URL into the release zip — no `.env` needed there.
+
+The popup also shows a **QR of your server URL** in the setup view (as soon as a valid URL is known) and next to the pairing QR — newcomers scan it to open AnyDrop in their phone's browser and install the PWA.
 
 ## API at a glance
 
