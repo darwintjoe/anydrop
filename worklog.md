@@ -184,3 +184,22 @@ Stage Summary:
 - AnyDrop fully published at github.com/darwintjoe/anydrop (branch main, public repo): Next.js PWA + Chrome extension v1.2.0 + mini-services/drop-socket + scripts
 - .env is now untracked (gitignored going forward); no secrets ever existed in history
 - User advised to revoke the pasted PAT since it appeared in chat
+
+---
+Task ID: 8
+Agent: main (Z.ai)
+Task: User approved follow-ups — add a README, set up GitHub Actions CI, tag release v1.2.0, publish all to github.com/darwintjoe/anydrop
+
+Work Log:
+- README.md: badges (CI/extension/PWA), Edge Drop retirement context, feature list, architecture ASCII diagram + component table, local run guide (bun + prisma + socket service), extension install & DEFAULT_SERVER_URL prefill, API endpoint table, privacy/limits, release-cut instructions
+- .github/workflows/ci.yml: 4 jobs — web (bun install --frozen-lockfile → db:push → eslint → next build with DATABASE_URL=file:./ci.db), extension (node --check ×3 + manifest JSON check → pip pillow → build_extension.py → upload-artifact zip), socket-service (bun install + bun build compile check), release (on v* tags only: download-artifact → softprops/action-gh-release with the zip + auto notes)
+- Fixed scripts/build_extension.py: ROOT was hardcoded to /home/z/my-project → now Path(__file__).resolve().parent.parent (CI-portable); verified locally — icons regenerated, zips rebuilt
+- Validated locally before push: build script OK, YAML parses, bun run lint clean
+- Push blocker: PAT lacked `workflow` scope (GitHub rejects workflow-file pushes without it) → user added scope on the same token → pushed main + tag
+- Tag-push quirk: v1.2.0 pushed in the same git push as main did NOT create a tag run; deleted and re-pushed the tag alone → run fired
+- Verified via GitHub API (token-authed): main run — all 3 jobs success (release job skipped, correct); v1.2.0 run success; Release v1.2.0 created with anydrop-extension.zip asset
+
+Stage Summary:
+- github.com/darwintjoe/anydrop now has: README landing page, green CI badge, CI on every push/PR, and an automated release pipeline — tag a v* and the extension zip is attached automatically
+- Release v1.2.0 live at github.com/darwintjoe/anydrop/releases with the prebuilt extension zip (matches extension/manifest.json 1.2.0)
+- Local HEAD == remote main (b8ce085; platform auto-commit of db/custom.db on top of d0bc453 is expected runtime noise)
