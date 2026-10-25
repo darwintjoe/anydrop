@@ -19,6 +19,10 @@
     <p class="setup-hint">1 · Point AnyDrop at your server</p>
     <input id="server-url" type="url" placeholder="https://your-anydrop-server" spellcheck="false" />
     <p class="setup-sub">Open the AnyDrop website, click “Copy server URL” in the pairing panel, paste it here.</p>
+    <div id="server-qr-wrap" class="server-qr hidden">
+      <img id="server-qr-img" alt="QR code linking to the AnyDrop server" />
+      <p>First time? Scan to open AnyDrop in your phone’s browser and install the app.</p>
+    </div>
 
     <p class="setup-hint">2 · Pair a Drop Room</p>
     <button id="create-room" class="btn-primary">Create room</button>
@@ -55,6 +59,9 @@
     <div id="qr-panel" class="qr-panel hidden">
       <img id="qr-img" alt="Pairing QR code" />
       <p>Scan with your phone camera to open this room on mobile.</p>
+      <div class="qr-sep"></div>
+      <img id="server-qr-img2" class="server-qr-img" alt="QR code linking to the AnyDrop server" />
+      <p class="server-qr-caption">New to AnyDrop? Scan to open the app on your phone and install it.</p>
     </div>
 
     <div id="drop-list" class="drop-list" aria-label="Dropped items"></div>

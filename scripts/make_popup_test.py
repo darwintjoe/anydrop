@@ -13,8 +13,10 @@ ROOT = Path('/home/z/my-project')
 EXT = ROOT / 'extension'
 OUT = ROOT / 'scripts' / 'popup-test'
 
-SERVER = 'http://127.0.0.1:81'
-ROOM = 'KVC97K'
+import sys
+
+SERVER = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:81'
+ROOM = sys.argv[2] if len(sys.argv) > 2 else 'KVC97K'
 
 
 def qr_data_url(text: str) -> str:

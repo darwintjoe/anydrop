@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AnyDrop \u2014 phone \u21c4 Chrome drop",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "The Edge Drop successor: pair your phone with Chrome via a room code and drop text, links, files and photos between devices.",
   "permissions": [
     "storage",

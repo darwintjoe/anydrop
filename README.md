@@ -13,6 +13,7 @@ Pair any two devices with a **6-character room code** (or by scanning a QR code)
 - **Two-way transfer** — phone ⇄ laptop, web app ⇄ Chrome extension, anything ⇄ anything
 - **Realtime delivery** — items broadcast over socket.io the moment they're sent
 - **Room pairing** — 6-character code, QR code, or true **scan-to-connect** using the camera (both in the web app and in the extension)
+- **Server QR for newcomers** — the extension popup shows a QR linking to the server, so anyone who first meets AnyDrop through the extension can scan it with their phone and install the PWA
 - **Smart composer** — one input that auto-detects links (adds `https://`), a **(+)** button for photos/videos or any file, clipboard-paste uploads, live upload progress with cancel
 - **PWA share target** — install the web app once, then share text/links/files to AnyDrop directly from any app's Share sheet (Android/Windows)
 - **Image viewer** — click an image to view it full-size, with **Save · Copy · Close** actions and toast feedback on both platforms
@@ -78,11 +79,17 @@ Put both behind one reverse proxy (e.g. Caddy/nginx) so the app and the socket s
 
 ### Prefill your server URL in the extension
 
+The default server URL is **not hardcoded** — it comes from your environment. Set it in `.env` (see [`.env.example`](.env.example)):
+
 ```bash
-DEFAULT_SERVER_URL=https://your-anydrop-host.example python3 scripts/build_extension.py
+cp .env.example .env
+# edit .env:
+# DEFAULT_SERVER_URL=https://your-anydrop-host.example
+
+python3 scripts/build_extension.py
 ```
 
-This repacks the zip with the server URL already filled in — installers only need to pair a room.
+The zip is repacked with the server URL already filled in — installers only need to pair a room. Leave it empty (the default) to let users paste their own server URL, and note that a real environment variable `DEFAULT_SERVER_URL` always wins over the `.env` value. The popup also shows a **QR of your server URL** in the setup view (as soon as a valid URL is known) and next to the pairing QR — newcomers scan it to open AnyDrop in their phone's browser and install the PWA.
 
 ## API at a glance
 

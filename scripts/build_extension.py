@@ -18,6 +18,21 @@ BUILD_TMP = ROOT / 'scripts' / 'tmp-build'
 SIZES = [16, 32, 48, 128]
 
 
+def load_env_file():
+    """Parse simple KEY=VALUE lines from .env at the repo root (no deps).
+    Real environment variables take precedence over .env values."""
+    env_path = ROOT / '.env'
+    values = {}
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, _, val = line.partition('=')
+            values[key.strip()] = val.strip().strip('"').strip("'")
+    return values
+
+
 def make_icons():
     ICONS.mkdir(parents=True, exist_ok=True)
     # Draw at 512 then downscale for crisp edges
@@ -52,17 +67,17 @@ def make_icons():
     print('icons ->', ', '.join(f'icon{s}.png' for s in SIZES))
 
 
-def inject_default_server():
-    """If DEFAULT_SERVER_URL env var is set, prefill it in popup.js."""
-    default_url = os.environ.get('DEFAULT_SERVER_URL', '').strip()
+def inject_default_server(default_url):
+    """Bake a default AnyDrop server URL into popup.js (from env var or .env)."""
     popup = EXT / 'popup.js'
     src = popup.read_text()
     # Remove any previous injection
     marker_start = '// === injected default server (build-time) ==='
+    marker_end = '// === end injection ==='
     if marker_start in src:
-        src = src.split(marker_start)[0] + src.split(marker_start)[2] if src.count(marker_start) > 1 else src
-        src = src.replace(marker_start, '')
-    header = ''
+        pre, rest = src.split(marker_start, 1)
+        rest = rest.split(marker_end, 1)[1]
+        src = pre + rest
     if default_url:
         safe = default_url.replace('\\', '').replace('"', '')
         header = (
@@ -70,13 +85,8 @@ def inject_default_server():
             f'const DEFAULT_SERVER_URL = "{safe}";\n'
             f'// === end injection ===\n'
         )
-        # Prefill input at boot
-        src = src.replace(
-            "  if (stored.serverUrl) els.serverUrl.value = stored.serverUrl;",
-            "  if (stored.serverUrl) els.serverUrl.value = stored.serverUrl;\n"
-            "  else if (typeof DEFAULT_SERVER_URL === 'string' && DEFAULT_SERVER_URL) els.serverUrl.value = DEFAULT_SERVER_URL;",
-        )
-    popup.write_text(header + src)
+        src = header + src
+    popup.write_text(src)
     print('default server:', default_url or '(none — user must paste)')
 
 
@@ -133,8 +143,13 @@ def build_zip():
 
 
 if __name__ == '__main__':
+    env_override = os.environ.get('DEFAULT_SERVER_URL', '').strip()
+    file_env = load_env_file().get('DEFAULT_SERVER_URL', '').strip()
+    default_url = env_override or file_env
+    if default_url:
+        print(f'default server source: {"environment" if env_override else ".env"}')
     make_icons()
-    inject_default_server()
+    inject_default_server(default_url)
     write_readme()
     build_zip()
     print('done')
