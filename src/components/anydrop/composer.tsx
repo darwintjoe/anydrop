@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { File as FileIcon, ImagePlus, Loader2, Plus, Send, X } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { sendFiles, sendLink, sendText, formatSize } from '@/lib/anydrop-client'
  *  - one input — typing a message sends a note, typing/pasting a URL sends a link
  *  - one (+) button — pick photos/videos or any file, they upload immediately
  *  - pasting an image/file from the clipboard uploads it right away
+ *  - Enter makes a new line (matches the extension); send via the button or Ctrl/Cmd+Enter
  */
 export default function Composer({ code }: { code: string }) {
   const { toast } = useToast();
@@ -26,12 +27,6 @@ export default function Composer({ code }: { code: string }) {
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
-  const enterSendsRef = useRef(true);
-
-  // Desktop keyboards: Enter sends. Touch keyboards: Enter = newline, use the button.
-  useEffect(() => {
-    enterSendsRef.current = !('ontouchstart' in window) || !window.matchMedia('(pointer: coarse)').matches;
-  }, []);
 
   const looksLikeLink = (content: string) =>
     /^https?:\/\//i.test(content) || /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(content.trim());
@@ -41,7 +36,9 @@ export default function Composer({ code }: { code: string }) {
     if (!raw || busy) return;
     setBusy(true);
     try {
-      if (looksLikeLink(raw)) {
+      // Only auto-detect links for single-line messages; anything with a
+      // line break is treated as a text note (same rule as the extension).
+      if (!raw.includes('\n') && looksLikeLink(raw)) {
         const content = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
         await sendLink(code, content);
       } else {
@@ -161,7 +158,10 @@ export default function Composer({ code }: { code: string }) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && enterSendsRef.current) {
+              // Enter inserts a newline (multiline composer). Send via the
+              // button or Ctrl/Cmd+Enter — same interaction language as the
+              // extension popup.
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 sendComposer();
               }
@@ -174,6 +174,7 @@ export default function Composer({ code }: { code: string }) {
               }
             }}
             placeholder="Message, link, anything…"
+            title="Enter for a new line · Ctrl+Enter to send"
             className="min-h-11 max-h-32 resize-none rounded-2xl"
             rows={1}
             aria-label="Message, link or paste to drop"
