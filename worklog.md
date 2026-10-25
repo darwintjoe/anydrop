@@ -227,3 +227,21 @@ Stage Summary:
 - Extension composer is now a real multiline chat box: Enter=newline, ✈ button or Ctrl/Cmd+Enter=send, pill grows to 3 lines then scrolls, multiline text never misrouted as a link; renders multiline on both ends (extension .card-body and PWA drop-card both pre-wrap)
 - Extension v1.2.1 released at github.com/darwintjoe/anydrop/releases — users should re-download/reload the unpacked extension
 - PWA composer intentionally unchanged (user asked for extension only)
+
+---
+Task ID: 10
+Agent: main (Z.ai)
+Task: User said "PWA chat box already multi line, please verify" — verify and align if needed
+
+Work Log:
+- Code audit src/components/anydrop/composer.tsx: it IS a shadcn <Textarea> with field-sizing-content (auto-grow to max-h-32) — multiline-capable rendering; BUT keydown had enterSendsRef: desktop (fine pointer) Enter=SEND (Shift+Enter=newline), touch Enter=newline — i.e. NOT the same language as the new extension composer
+- Live BEFORE test (gateway :81, room KVC97K, desktop context): typed line + Enter → message SENT instantly (cards 4→5, input cleared) — confirmed the discrepancy
+- Aligned composer.tsx with extension: removed enterSendsRef + useEffect (and unused import); Enter now inserts newline on ALL devices; send = button or Ctrl/Cmd+Enter; multiline guard !raw.includes('\n') for link auto-detect (same rule as extension); title tooltip "Enter for a new line · Ctrl+Enter to send"; comment updated
+- Live AFTER tests (real typing, room KVC97K): Enter → value "pwa line one\npwa line two", no send; Ctrl+Enter → NOTE with both lines, input cleared; "see github.com/microsoft/edge\nand second line" → NOTE (guard ✓); single-line "github.com/microsoft/edge" → LINK https:// prefixed (regression ✓); no page errors; screenshot verify-pwa-multiline.png
+- Test-harness gotcha noted: setting ta.value + dispatching native input does NOT drive React state — trusted typing (agent-browser type/fill) required for controlled components
+- bun run lint clean; committed 1addee4; pushed main; no tag/zip (extension untouched)
+
+Stage Summary:
+- Verified user's claim precisely: PWA box was multiline-capable (auto-grow textarea) and Enter=newline on touch, but desktop Enter still sent — now aligned
+- Both surfaces now share one interaction language: Enter=newline everywhere, button or Ctrl/Cmd+Enter=send, multiline text never misrouted as link
+- Next.js dev hot-reloaded the change; PWA users get it on refresh
