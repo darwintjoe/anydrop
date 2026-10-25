@@ -256,13 +256,21 @@ function looksLikeLink(content) {
   return /^https?:\/\//i.test(content) || /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(content);
 }
 
+function autoGrowComposer() {
+  const el = els.composerInput;
+  el.style.height = 'auto';
+  el.style.height = `${Math.min(el.scrollHeight, 116)}px`;
+}
+
 async function sendFromComposer() {
   const raw = els.composerInput.value.trim();
   if (!raw || els.composerSend.disabled) return;
   els.composerSend.disabled = true;
   els.composerSend.classList.add('busy');
   try {
-    if (looksLikeLink(raw)) {
+    // Only auto-detect links for single-line messages; anything with a
+    // line break is treated as a text note.
+    if (!raw.includes('\n') && looksLikeLink(raw)) {
       const content = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
       await api(`/api/rooms/${settings.roomCode}/drops`, {
         method: 'POST',
@@ -277,6 +285,7 @@ async function sendFromComposer() {
       });
     }
     els.composerInput.value = '';
+    autoGrowComposer();
     pollNow();
   } catch (e) {
     flashComposerError(e.message);
@@ -476,10 +485,13 @@ els.dropPage.addEventListener('click', async () => {
 
 els.composerInput.addEventListener('input', () => {
   els.composerSend.disabled = !els.composerInput.value.trim() || els.composerSend.classList.contains('busy');
+  autoGrowComposer();
 });
 
+// Enter inserts a newline (multiline composer). Send via the ✈ button or
+// Ctrl/Cmd+Enter.
 els.composerInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
     e.preventDefault();
     sendFromComposer();
   }
