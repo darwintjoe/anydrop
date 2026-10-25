@@ -336,7 +336,6 @@ export default function PrivacyPage() {
       <footer className="pp-footer">
         <div className="pp-foot-inner">
           <span className="pp-foot-brand">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/anydrop.svg" alt="" />
             AnyDrop — Edge Drop lives on, now in Chrome.
           </span>

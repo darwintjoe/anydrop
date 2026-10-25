@@ -98,6 +98,29 @@ async function saveSettings(patch) {
   await chrome.storage.local.set(patch);
 }
 
+// The manifest ships with NO host permissions: HTTPS servers work out of the
+// box because the AnyDrop API sends Access-Control-Allow-Origin: * and room
+// codes travel in the URL path (no cookies). Plain-HTTP servers (e.g. LAN
+// self-hosting) are the one case that still needs an origin-scoped host
+// permission in MV3, so we ask Chrome for it at runtime — only for that
+// exact origin, only on the user's setup click.
+async function ensureOriginPermission(rawUrl) {
+  let u;
+  try {
+    u = new URL(rawUrl);
+  } catch {
+    return true; // URL validation already ran; nothing to request
+  }
+  if (u.protocol !== 'http:') return true; // https needs no host permission
+  const origin = `${u.origin}/*`;
+  try {
+    if (await chrome.permissions.contains({ origins: [origin] })) return true;
+    return await chrome.permissions.request({ origins: [origin] });
+  } catch {
+    return false;
+  }
+}
+
 function enterMain() {
   els.roomCode.textContent = settings.roomCode;
   els.serverUrl.value = settings.serverUrl;
@@ -415,6 +438,9 @@ els.createRoom.addEventListener('click', async () => {
   els.createRoom.disabled = true;
   els.setupError.classList.add('hidden');
   try {
+    if (!(await ensureOriginPermission(url))) {
+      return showSetupError('Chrome needs permission to reach this http:// server — allow it, then try again.');
+    }
     await saveSettings({ serverUrl: url });
     const room = await api('/api/rooms', { method: 'POST' });
     await saveSettings({ roomCode: room.code, lastSeenAt: new Date().toISOString() });
@@ -434,6 +460,9 @@ els.joinRoom.addEventListener('click', async () => {
   els.joinRoom.disabled = true;
   els.setupError.classList.add('hidden');
   try {
+    if (!(await ensureOriginPermission(url))) {
+      return showSetupError('Chrome needs permission to reach this http:// server — allow it, then try again.');
+    }
     await saveSettings({ serverUrl: url });
     await api(`/api/rooms/${code}`); // validate
     await saveSettings({ roomCode: code, lastSeenAt: new Date().toISOString() });

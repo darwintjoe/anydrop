@@ -59,3 +59,7 @@ scripts/popup-test/config.js
 
 # ...but keep the tracked env template
 !.env.example
+
+# local tool artifacts & uploads
+tool-results/
+upload/
