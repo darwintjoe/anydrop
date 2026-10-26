@@ -19,7 +19,6 @@ const els = {
   qrImg: document.getElementById('qr-img'),
   serverQrWrap: document.getElementById('server-qr-wrap'),
   serverQrImg: document.getElementById('server-qr-img'),
-  serverQrImg2: document.getElementById('server-qr-img2'),
   dropPage: document.getElementById('drop-page'),
   composerInput: document.getElementById('composer-input'),
   composerSend: document.getElementById('composer-send'),
@@ -128,8 +127,6 @@ function enterMain() {
   els.qrImg.src = `${base}/api/qr?text=${encodeURIComponent(
     base + '/?room=' + settings.roomCode
   )}&size=220`;
-  // Server QR — newcomers scan to open/install the PWA (no room attached)
-  els.serverQrImg2.src = `${base}/api/qr?text=${encodeURIComponent(base)}&size=170`;
   els.openWeb.href = settings.serverUrl;
   show('main');
   pollNow();
